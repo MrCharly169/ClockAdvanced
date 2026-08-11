@@ -5,8 +5,8 @@
   "config_flow": true,
   "integration_type": "helper",
   "iot_class": "calculated",
-  "documentation": "https://github.com/MrCharly169/clock-advanced",
-  "issue_tracker": "https://github.com/MrCharly169/clock-advanced/issues",
+  "documentation": "https://github.com/MrCharly169/ClockAdvanced",
+  "issue_tracker": "https://github.com/MrCharly169/ClockAdvanced/issues",
   "dependencies": [
     "http",
     "persistent_notification"
