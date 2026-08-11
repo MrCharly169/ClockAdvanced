@@ -2,19 +2,32 @@ const fs = require("fs");
 const path = require("path");
 
 class FakeShadow {
-  constructor() { this.innerHTML = ""; }
+  constructor() { this._innerHTML = ""; this._badge = null; this.writeCount = 0; }
+  set innerHTML(value) {
+    this._innerHTML = String(value || "");
+    this._badge = this._innerHTML.includes("<ha-badge") ? new FakeElement() : null;
+    this.writeCount += 1;
+  }
+  get innerHTML() { return this._innerHTML; }
   addEventListener() {}
-  querySelector() { return null; }
+  querySelector(selector) { return selector === "ha-badge" ? this._badge : null; }
   querySelectorAll() { return []; }
 }
 class FakeElement {
-  constructor() { this.shadowRoot = null; }
+  constructor() { this.shadowRoot = null; this.listeners = new Map(); this.dispatchedEvents = []; }
   attachShadow() { this.shadowRoot = new FakeShadow(); return this.shadowRoot; }
-  addEventListener() {}
-  dispatchEvent() {}
+  addEventListener(type, handler) { this.listeners.set(type, handler); }
+  dispatchEvent(event) { this.dispatchedEvents.push(event); return true; }
 }
 global.HTMLElement = FakeElement;
-global.Event = class { constructor(type, options) { this.type = type; Object.assign(this, options); } };
+global.Event = class {
+  constructor(type, options = {}) { this.type = type; Object.assign(this, options); }
+  stopPropagation() {}
+  preventDefault() {}
+};
+global.CustomEvent = class extends global.Event {
+  constructor(type, options = {}) { super(type, options); this.detail = options.detail; }
+};
 global.navigator = { language: "en" };
 const registry = new Map();
 global.customElements = {
@@ -33,7 +46,7 @@ global.document = { createElement(name) { const Ctor = registry.get(name); retur
   if (!registry.get("clock-advanced-card-editor")) throw new Error("Editor was not registered");
   const Badge = registry.get("clock-advanced-badge");
   if (!Badge || !registry.get("clock-advanced-badge-editor")) throw new Error("Badge was not registered");
-  const hass = { states: { "sensor.clock_status": { state: "scheduled", attributes: { card_contract: 1, card_type: "custom:clock-advanced-card", controls: {}, schedule: [] } } }, language: "en", callService: async () => {} };
+  const hass = { states: { "sensor.clock_status": { state: "scheduled", attributes: { card_contract: 1, card_type: "custom:clock-advanced-card", controls: {}, schedule: [], name: "Bedroom clock", next_alarm: "2031-06-21T06:00:00+00:00" } } }, language: "en", callService: async () => {} };
   const stub = Card.getStubConfig(hass);
   if (stub.entity !== "sensor.clock_status") throw new Error("Stub did not discover the status entity");
   if (stub.mode !== "easy") throw new Error("Easy is not the default Card mode");
@@ -52,7 +65,43 @@ global.document = { createElement(name) { const Ctor = registry.get(name); retur
   const badge = new Badge();
   badge.setConfig(badgeStub);
   badge.hass = hass;
-  if (!badge.shadowRoot.innerHTML.includes('<ha-badge') || !badge.shadowRoot.innerHTML.includes('icon-only')) throw new Error("Badge does not use the native ha-badge element");
+  if (!badge.shadowRoot.innerHTML.includes('<ha-badge type="button" icon-only data-mode="scheduled"')
+    || !badge.shadowRoot.innerHTML.includes('class="clock-symbol" icon="mdi:alarm"')
+    || !badge.shadowRoot.innerHTML.includes('class="state-marker"><ha-icon icon="mdi:calendar-check"')
+    || !badge.shadowRoot.innerHTML.includes("Bedroom clock")
+    || !badge.shadowRoot.innerHTML.includes("Next alarm")) throw new Error("Badge lost its native Clock identity, state marker, or next alarm detail");
+  badge.shadowRoot.querySelector("ha-badge")?.listeners.get("click")?.(new Event("click"));
+  if (badge.dispatchedEvents.at(-1)?.detail?.entityId !== "sensor.clock_status") throw new Error("Badge did not open the native entity details");
+  const renderCount = badge.shadowRoot.writeCount;
+  badge.hass = hass;
+  if (badge.shadowRoot.writeCount !== renderCount) throw new Error("Badge rerendered although its relevant state did not change");
+  const badgeModeCases = {
+    idle: "mdi:minus", scheduled: "mdi:calendar-check", disabled: "mdi:power",
+    vacation: "mdi:palm-tree", pre_alarm: "mdi:weather-sunset-up", ringing: "mdi:bell-ring",
+    snoozed: "mdi:alarm-snooze", dismissed: "mdi:check", skipped: "mdi:skip-next",
+    timeout: "mdi:timer-alert", error: "mdi:alert-circle", blocked: "mdi:shield-off",
+  };
+  for (const [mode, marker] of Object.entries(badgeModeCases)) {
+    const entityId = `sensor.clock_${mode}`;
+    const modeBadge = new Badge();
+    modeBadge.setConfig({ entity: entityId, language: "en" });
+    modeBadge.hass = { ...hass, states: { ...hass.states, [entityId]: {
+      state: mode,
+      attributes: {
+        name: `Clock ${mode}`,
+        next_alarm: "2031-06-21T06:00:00+00:00",
+        active_since: "2031-06-21T05:55:00+00:00",
+        snooze_until: "2031-06-21T06:10:00+00:00",
+      },
+    } } };
+    if (!modeBadge.shadowRoot.innerHTML.includes(`data-mode="${mode}"`)
+      || !modeBadge.shadowRoot.innerHTML.includes('class="clock-symbol" icon="mdi:alarm"')
+      || !modeBadge.shadowRoot.innerHTML.includes(`class="state-marker"><ha-icon icon="${marker}"`)) throw new Error(`Badge mode ${mode} lost the stable alarm identity or state marker`);
+  }
+  const badgeEditor = new (registry.get("clock-advanced-badge-editor"))();
+  badgeEditor.setConfig(badgeStub);
+  badgeEditor.hass = hass;
+  if (!badgeEditor.shadowRoot.innerHTML.includes("The main symbol always remains the alarm clock")) throw new Error("Badge editor did not explain the stable alarm symbol and state marker");
   if (!window.customBadges?.some((item) => item.type === "clock-advanced-badge")) throw new Error("Badge picker registration missing");
   if (!source.includes('{ value: "compact"') || !source.includes('{ value: "easy"') || !source.includes('{ value: "advanced"')) throw new Error("Compact, Easy, and Advanced modes are not available");
   console.log("Clock Advanced Card runtime contract valid");

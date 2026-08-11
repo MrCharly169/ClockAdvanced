@@ -90,7 +90,7 @@ entity: sensor.advanced_alarm_clock_status
 language: auto
 ```
 
-Das Badge verwendet direkt das native kleine, runde Home-Assistant-Element `ha-badge`. Symbol und Farbe zeigen den Zustand; Tooltip beziehungsweise Barrierefreiheitsname enthalten nächste Weckzeit und Status. Ein Klick öffnet den normalen Home-Assistant-Mehr-Info-Dialog.
+Das Badge verwendet direkt das native kleine, runde Home-Assistant-Element `ha-badge` und folgt derselben Logik wie der aktuelle SmartShading-Badge: Das große Weckersymbol bleibt als eindeutige Clock-Advanced-Kennung immer erhalten. Eine kleine Zusatzmarkierung und die semantische HA-Themefarbe zeigen Geplant, Voralarm, Wecken, Schlummern, Urlaub, Blockiert, Deaktiviert, Übersprungen, Beendet oder Fehler. Tooltip und Barrierefreiheitsname enthalten Status und den zeitlich passenden Alarmkontext. Maus, Enter oder Leertaste öffnen den normalen Home-Assistant-Mehr-Info-Dialog.
 
 The resource URL is permanent and deliberately has no version query. The manifest is the only technical version source.
 

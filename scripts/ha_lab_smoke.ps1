@@ -116,6 +116,10 @@ if (-not $CardSource.Contains("customElements.define(CARD_TAG")) {
 if (-not $CardSource.Contains("customElements.define(BADGE_TAG")) {
     throw "Bundled Card resource did not contain the custom badge"
 }
+if (-not $CardSource.Contains('class="clock-symbol" icon="mdi:alarm"') -or
+    -not $CardSource.Contains('class="state-marker"')) {
+    throw "Bundled Badge resource did not contain the stable alarm symbol and lifecycle marker"
+}
 
 $BrandResponse = Invoke-WebRequest -UseBasicParsing `
     -Uri "$BaseUrl/api/brands/integration/clock_advanced/icon.png?placeholder=no" `

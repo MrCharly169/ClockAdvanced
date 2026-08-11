@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Adopted the latest SmartShading badge logic: the native round Badge now keeps a permanent alarm-clock glyph, overlays a small lifecycle marker, uses semantic HA theme colors, avoids irrelevant rerenders, and opens native entity details by mouse or keyboard.
 - Replaced the YAML-mode lab with a Home Assistant-managed, fully editable storage dashboard and storage-backed Schedule helper.
 - Reduced Card layouts to Compact, Easy, and Advanced; Easy is now the default and old layout values migrate visually without breaking existing dashboards.
 - Rebuilt both graphical editors with native Home Assistant form selectors and switched the Badge to the native `ha-badge` element.

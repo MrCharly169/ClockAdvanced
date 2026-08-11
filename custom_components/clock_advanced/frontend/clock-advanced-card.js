@@ -484,12 +484,9 @@ class ClockAdvancedBadge extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this.shadowRoot.addEventListener("click", () => {
-      if (!this._config?.entity) return;
-      const event = new Event("hass-more-info", { bubbles: true, composed: true });
-      event.detail = { entityId: this._config.entity };
-      this.dispatchEvent(event);
-    });
+    this._config = {};
+    this._hass = null;
+    this._lastRenderSignature = "";
   }
 
   static getConfigElement() {
@@ -507,12 +504,53 @@ class ClockAdvancedBadge extends HTMLElement {
       throw new Error("Clock Advanced badge requires its status sensor entity");
     }
     this._config = { language: "auto", ...config };
+    this._lastRenderSignature = "";
     this._render();
   }
 
   set hass(value) {
     this._hass = value;
+    const entity = value?.states?.[this._config.entity];
+    const controls = entity?.attributes?.controls || {};
+    const related = Object.values(controls).map((entityId) => {
+      const state = value?.states?.[entityId];
+      return [entityId, state?.state, state?.last_changed];
+    });
+    let signature;
+    try {
+      signature = JSON.stringify([
+        this._config, value?.language || "en", entity?.state, entity?.attributes, related,
+      ]);
+    } catch (_error) {
+      signature = `${this._config.entity || ""}:${entity?.state || ""}:${entity?.last_changed || ""}`;
+    }
+    if (signature === this._lastRenderSignature) return;
+    this._lastRenderSignature = signature;
     this._render();
+  }
+
+  _openMoreInfo() {
+    const entityId = String(this._config.entity || "");
+    if (!entityId) return;
+    this.dispatchEvent(new CustomEvent("hass-more-info", {
+      bubbles: true,
+      composed: true,
+      detail: { entityId },
+    }));
+  }
+
+  _bindInteraction() {
+    const badge = this.shadowRoot?.querySelector?.("ha-badge");
+    if (!badge || !this._config.entity) return;
+    badge.addEventListener?.("click", (event) => {
+      event.stopPropagation?.();
+      this._openMoreInfo();
+    });
+    badge.addEventListener?.("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault?.();
+      this._openMoreInfo();
+    });
   }
 
   _lang() {
@@ -521,21 +559,75 @@ class ClockAdvancedBadge extends HTMLElement {
     return String(this._hass?.language || navigator.language || "en").toLowerCase().startsWith("de") ? "de" : "en";
   }
 
-  _icon(status) {
+  _stateIcon(status) {
     return ({
-      ringing: "mdi:alarm-bell", pre_alarm: "mdi:weather-sunset-up",
+      scheduled: "mdi:calendar-check", idle: "mdi:minus",
+      ringing: "mdi:bell-ring", pre_alarm: "mdi:weather-sunset-up",
       snoozed: "mdi:alarm-snooze", vacation: "mdi:palm-tree",
-      blocked: "mdi:alarm-off", disabled: "mdi:power-sleep",
+      blocked: "mdi:shield-off", disabled: "mdi:power",
+      dismissed: "mdi:check", skipped: "mdi:skip-next",
       timeout: "mdi:timer-alert", error: "mdi:alert-circle",
-    })[status] || "mdi:alarm";
+      unavailable: "mdi:alert-circle-outline",
+    })[status] || "mdi:calendar-clock";
   }
 
   _color(status) {
     return ({
-      ringing: "#fb923c", pre_alarm: "#fb923c", snoozed: "#a78bfa",
-      vacation: "#2dd4bf", blocked: "#fbbf24", disabled: "#94a3b8",
-      timeout: "#f87171", error: "#f87171",
+      ringing: "var(--orange-color,#fb923c)",
+      pre_alarm: "var(--orange-color,#fb923c)",
+      snoozed: "var(--purple-color,#a78bfa)",
+      vacation: "var(--teal-color,#14b8a6)",
+      blocked: "var(--amber-color,#fbbf24)",
+      dismissed: "var(--green-color,#4caf50)",
+      skipped: "var(--info-color,var(--primary-color,#039be5))",
+      timeout: "var(--error-color,var(--red-color,#db4437))",
+      error: "var(--error-color,var(--red-color,#db4437))",
+      unavailable: "var(--error-color,var(--red-color,#db4437))",
+      disabled: "var(--state-inactive-color,var(--secondary-text-color,#727272))",
+      idle: "var(--state-inactive-color,var(--secondary-text-color,#727272))",
     })[status] || "var(--primary-color,#03a9f4)";
+  }
+
+  _formatMoment(value, lang) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    const sameDate = (left, right) => left.getFullYear() === right.getFullYear()
+      && left.getMonth() === right.getMonth() && left.getDate() === right.getDate();
+    const locale = lang === "de" ? "de-DE" : "en-GB";
+    const day = sameDate(date, now)
+      ? TEXT[lang].today
+      : sameDate(date, tomorrow)
+        ? TEXT[lang].tomorrow
+        : new Intl.DateTimeFormat(locale, {
+          weekday: "short", day: "2-digit", month: "2-digit",
+        }).format(date);
+    const time = new Intl.DateTimeFormat(locale, {
+      hour: "2-digit", minute: "2-digit", hour12: false,
+    }).format(date);
+    return `${day}, ${time}`;
+  }
+
+  _statusDetails(entity, lang) {
+    const t = TEXT[lang];
+    const attrs = entity?.attributes || {};
+    const mode = String(entity?.state || "unavailable");
+    const status = t[mode] || mode;
+    let timing = "";
+    if (mode === "snoozed") {
+      const moment = this._formatMoment(attrs.snooze_until, lang);
+      if (moment) timing = `${lang === "de" ? "Schlummert bis" : "Snoozed until"} ${moment}`;
+    } else if (["pre_alarm", "ringing"].includes(mode)) {
+      const moment = this._formatMoment(attrs.active_since, lang);
+      if (moment) timing = `${lang === "de" ? "Aktiv seit" : "Active since"} ${moment}`;
+    } else {
+      const moment = this._formatMoment(attrs.next_alarm, lang);
+      timing = moment ? `${t.next}: ${moment}` : t.noAlarm;
+    }
+    return { mode, status, timing };
   }
 
   _render() {
@@ -544,26 +636,41 @@ class ClockAdvancedBadge extends HTMLElement {
     const lang = this._lang();
     const t = TEXT[lang];
     if (!entity) {
-      this.shadowRoot.innerHTML = `<style>.unavailable{display:inline-block;padding:10px;color:var(--secondary-text-color);font-size:.75rem}</style><span class="unavailable">${esc(t.unavailable)}</span>`;
+      this.shadowRoot.innerHTML = `<style>
+        :host{display:block;width:var(--ha-badge-size,36px);height:var(--ha-badge-size,36px)}
+        ha-badge{--badge-color:${esc(this._color("unavailable"))}}
+        .badge-symbol{position:relative;display:grid;place-items:center;width:22px;height:22px;color:var(--badge-color)}
+        .clock-symbol{--mdc-icon-size:20px}
+        .state-marker{position:absolute;right:-4px;bottom:-4px;display:grid;place-items:center;width:12px;height:12px;border-radius:50%;background:var(--ha-card-background,var(--card-background-color,#fff));box-shadow:0 0 0 1px var(--ha-card-border-color,var(--divider-color,#ddd));color:var(--badge-color)}
+        .state-marker ha-icon{--mdc-icon-size:9px}
+      </style>
+      <ha-badge icon-only data-mode="unavailable" title="${esc(t.unavailable)}" aria-label="${esc(t.unavailable)}">
+        <span slot="icon" class="badge-symbol">
+          <ha-icon class="clock-symbol" icon="mdi:alarm"></ha-icon>
+          <span class="state-marker"><ha-icon icon="mdi:alert-circle-outline"></ha-icon></span>
+        </span>
+      </ha-badge>`;
       return;
     }
     const attrs = entity.attributes || {};
-    const targetValue = attrs.snooze_until || attrs.next_alarm || attrs.active_since;
-    const target = targetValue ? new Date(targetValue) : null;
-    const validTarget = target && !Number.isNaN(target.getTime());
-    const time = validTarget
-      ? target.toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit", hour12: false })
-      : "--:--";
-    const status = t[entity.state] || entity.state;
+    const details = this._statusDetails(entity, lang);
     const title = this._config.title || attrs.name || entity.attributes.friendly_name || "Clock Advanced";
-    const tooltip = `${title} · ${time} · ${status}`;
+    const tooltip = [title, details.status, details.timing].filter(Boolean).join(" · ");
     this.shadowRoot.innerHTML = `<style>
-        ha-badge{--badge-color:${esc(this._color(entity.state))}}
-        .unavailable{display:inline-block;padding:10px;color:var(--secondary-text-color);font-size:.75rem}
+        :host{display:block;width:var(--ha-badge-size,36px);height:var(--ha-badge-size,36px)}
+        ha-badge{--badge-color:${esc(this._color(details.mode))}}
+        .badge-symbol{position:relative;display:grid;place-items:center;width:22px;height:22px;color:var(--badge-color)}
+        .clock-symbol{--mdc-icon-size:20px}
+        .state-marker{position:absolute;right:-4px;bottom:-4px;display:grid;place-items:center;width:12px;height:12px;border-radius:50%;background:var(--ha-card-background,var(--card-background-color,#fff));box-shadow:0 0 0 1px var(--ha-card-border-color,var(--divider-color,#ddd));color:var(--badge-color)}
+        .state-marker ha-icon{--mdc-icon-size:9px}
       </style>
-      <ha-badge type="button" icon-only title="${esc(tooltip)}" aria-label="${esc(tooltip)}">
-        <ha-icon slot="icon" icon="${esc(this._icon(entity.state))}"></ha-icon>
+      <ha-badge type="button" icon-only data-mode="${esc(details.mode)}" title="${esc(tooltip)}" aria-label="${esc(tooltip)}">
+        <span slot="icon" class="badge-symbol">
+          <ha-icon class="clock-symbol" icon="mdi:alarm"></ha-icon>
+          <span class="state-marker"><ha-icon icon="${esc(this._stateIcon(details.mode))}"></ha-icon></span>
+        </span>
       </ha-badge>`;
+    this._bindInteraction();
   }
 }
 
@@ -574,7 +681,11 @@ class ClockAdvancedBadgeEditor extends HTMLElement {
   _render() {
     if (!this._config) return;
     const de = String(this._hass?.language || "en").toLowerCase().startsWith("de");
-    this.shadowRoot.innerHTML = `<ha-form></ha-form><style>:host{display:block;padding:4px 0}</style>`;
+    this.shadowRoot.innerHTML = `<ha-form></ha-form>
+      <div class="help">${de
+        ? "Das Hauptsymbol bleibt immer der Wecker. Die kleine Zusatzmarkierung und die Farbe zeigen den aktuellen Zustand. Anklicken öffnet alle Alarmdetails."
+        : "The main symbol always remains the alarm clock. The small marker and color show the current state. Select it to open all alarm details."}</div>
+      <style>:host{display:block;padding:4px 0}.help{margin-top:12px;font-size:11px;line-height:1.4;color:var(--secondary-text-color)}</style>`;
     const form = this.shadowRoot.querySelector?.("ha-form");
     if (!form) return;
     form.hass = this._hass;
