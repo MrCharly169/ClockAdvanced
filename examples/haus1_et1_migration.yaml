@@ -1,0 +1,73 @@
+# Migration profile for the original HAUS1-ET1 automation.
+# Copy individual sequences into the matching Clock Advanced UI action fields.
+# This file is an example only; the integration contains no personal entity IDs.
+
+prepare:
+  - action: light.turn_on
+    target:
+      entity_id: light.haus1_et1_masterbedroom_wled
+    data:
+      effect: Solid
+  - action: select.select_option
+    target:
+      entity_id: select.haus1_et1_masterbedroom_wled_preset
+    data:
+      option: Sunrise_2
+
+start:
+  - action: media_player.volume_set
+    target:
+      entity_id: media_player.bedroom_clock
+    data:
+      volume_level: 0.6
+  - action: media_player.play_media
+    target:
+      entity_id: media_player.bedroom_clock
+    data:
+      media_content_id: media-source://radio_browser/80f07344-504e-48dd-8775-ab60c4a82068
+      media_content_type: audio/mpeg
+
+repeat:
+  - action: media_player.play_media
+    target:
+      entity_id: media_player.bedroom_clock
+    data:
+      media_content_id: media-source://radio_browser/80f07344-504e-48dd-8775-ab60c4a82068
+      media_content_type: audio/mpeg
+
+escalate:
+  - action: media_player.turn_on
+    target:
+      entity_id: media_player.wohnzimmer
+  - delay: "00:00:08"
+  - action: media_player.volume_set
+    target:
+      entity_id: media_player.wohnzimmer
+    data:
+      volume_level: 0.6
+  - action: media_player.play_media
+    target:
+      entity_id: media_player.wohnzimmer
+    data:
+      media_content_id: media-source://media_source/local/baby_shark.mp3
+      media_content_type: music
+
+timeout:
+  - action: script.central_notification_router
+    data:
+      route: input_text.notify_route_charel_mobile
+      payload:
+        title: "Alarm timeout"
+        message: "Alarm was stopped after the configured inactivity limit."
+        data:
+          priority: high
+
+cleanup:
+  - action: media_player.turn_off
+    target:
+      entity_id:
+        - media_player.wohnzimmer
+        - media_player.bedroom_clock
+  - action: light.turn_off
+    target:
+      entity_id: light.haus1_et1_masterbedroom_wled

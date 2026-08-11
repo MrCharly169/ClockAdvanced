@@ -1,0 +1,173 @@
+{
+  "title": "Clock Advanced",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Create an advanced alarm clock",
+        "description": "Step 1 of 7 · Give this independent clock a clear room or purpose name. The wizard will guide you through timing, conditions, behavior, and actions.",
+        "data": { "name": "Name" }
+      },
+      "source": {
+        "title": "Choose the alarm source",
+        "description": "Step 2 of 7 · Use Clock Advanced's exact weekly alarm times, or trigger when a Home Assistant Schedule helper changes from off to on.",
+        "data": { "schedule_source": "Alarm source" }
+      },
+      "helper_schedule": {
+        "title": "Select a Schedule helper",
+        "description": "Step 3 of 7 · The alarm starts at the beginning of every active block. Create or edit the helper under Settings → Devices & services → Helpers.",
+        "data": { "schedule_entity": "Schedule helper" }
+      },
+      "schedule": {
+        "title": "Weekly schedule",
+        "description": "Step 3 of 7 · Enable days independently. Holiday and non-workday times override only enabled days.",
+        "data": {
+          "monday_enabled": "Monday enabled", "monday_time": "Monday time",
+          "tuesday_enabled": "Tuesday enabled", "tuesday_time": "Tuesday time",
+          "wednesday_enabled": "Wednesday enabled", "wednesday_time": "Wednesday time",
+          "thursday_enabled": "Thursday enabled", "thursday_time": "Thursday time",
+          "friday_enabled": "Friday enabled", "friday_time": "Friday time",
+          "saturday_enabled": "Saturday enabled", "saturday_time": "Saturday time",
+          "sunday_enabled": "Sunday enabled", "sunday_time": "Sunday time",
+          "holiday_enabled": "Use holiday-mode time", "holiday_time": "Holiday-mode time",
+          "non_workday_enabled": "Use non-workday time", "non_workday_time": "Non-workday time"
+        }
+      },
+      "behavior": {
+        "title": "Alarm lifecycle",
+        "description": "Step 5 of 7 · Repeat cadence and snooze are separate. Timeout covers the complete alarm session, including snoozes.",
+        "data": {
+          "pre_alarm_minutes": "Pre-alarm lead time (minutes)",
+          "repeat_interval_minutes": "Repeat interval (minutes)",
+          "escalate_after_repeats": "Escalate after repeats (0 disables)",
+          "snooze_minutes": "Snooze duration (minutes)",
+          "max_snoozes": "Maximum snoozes (0 disables)",
+          "timeout_minutes": "Safety timeout (minutes)",
+          "terminal_state_minutes": "Keep final state visible (minutes)"
+        }
+      },
+      "guards": {
+        "title": "Conditions and blockers",
+        "description": "Step 4 of 7 · Add only the conditions you need. For advanced logic, expose a template binary sensor and select it as the allow or block entity.",
+        "data": {
+          "workday_sensor": "Workday sensor",
+          "vacation_entity": "Vacation-mode entity",
+          "confirmation_sensor": "Wake-up confirmation sensor",
+          "block_non_workdays": "Block completely on non-workdays",
+          "allow_entity": "Only allow when entity…",
+          "allow_state": "…has this state",
+          "block_entity": "Block when entity…",
+          "block_state": "…has this state"
+        },
+        "data_description": {
+          "workday_sensor": "When off, today's enabled weekday uses the non-workday time.",
+          "vacation_entity": "When on, no alarm is armed and an active alarm is dismissed.",
+          "confirmation_sensor": "When on during an active alarm, it dismisses the alarm as confirmed.",
+          "block_non_workdays": "Overrides the non-workday time and blocks the alarm whenever the workday sensor is off.",
+          "allow_entity": "Examples: person, presence, guest-mode, or a template binary sensor.",
+          "allow_state": "Typical states are on or home. The comparison is exact.",
+          "block_entity": "Examples: quiet mode, child sleeping, meeting mode, or a template binary sensor.",
+          "block_state": "Typical state is on. The comparison is exact."
+        }
+      },
+      "actions": {
+        "title": "Action phases",
+        "description": "Step 6 of 7 · Build normal Home Assistant action sequences. All fields are optional and receive the variable clock_advanced.",
+        "data": {
+          "actions_prepare": "Prepare / pre-alarm", "actions_start": "Start",
+          "actions_repeat": "Repeat", "actions_escalate": "Escalate",
+          "actions_snooze": "Snooze", "actions_dismiss": "Dismiss / confirmed",
+          "actions_timeout": "Timeout", "actions_cleanup": "Cleanup"
+        }
+      },
+      "review": {
+        "title": "Review and create",
+        "description": "Step 7 of 7 · **{name}**\n\nAlarm source: `{source}`  \nConfigured conditions: **{guards}**  \nConfigured action phases: **{actions}**\n\nYou can change every section later from the integration options.",
+        "data": { "confirm": "Create this alarm clock" }
+      }
+    },
+    "error": {
+      "schedule_required": "Select a Schedule helper for this source.",
+      "confirmation_required": "Confirm the summary before creating this alarm clock."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Clock Advanced settings",
+        "description": "Open one section. Saving reloads this clock without restarting Home Assistant.",
+        "menu_options": {
+          "source": "Alarm source", "schedule": "Weekly schedule", "behavior": "Alarm lifecycle",
+          "guards": "Optional guards", "actions": "Action phases"
+        }
+      },
+      "source": {
+        "title": "Alarm source",
+        "description": "Choose the internal weekly schedule or a Home Assistant Schedule helper. A helper is required for the Schedule-helper source.",
+        "data": { "schedule_source": "Alarm source", "schedule_entity": "Schedule helper" }
+      },
+      "schedule": {
+        "title": "Weekly schedule",
+        "description": "Enable days independently. Holiday and non-workday times override only enabled days.",
+        "data": {
+          "monday_enabled": "Monday enabled", "monday_time": "Monday time",
+          "tuesday_enabled": "Tuesday enabled", "tuesday_time": "Tuesday time",
+          "wednesday_enabled": "Wednesday enabled", "wednesday_time": "Wednesday time",
+          "thursday_enabled": "Thursday enabled", "thursday_time": "Thursday time",
+          "friday_enabled": "Friday enabled", "friday_time": "Friday time",
+          "saturday_enabled": "Saturday enabled", "saturday_time": "Saturday time",
+          "sunday_enabled": "Sunday enabled", "sunday_time": "Sunday time",
+          "holiday_enabled": "Use holiday-mode time", "holiday_time": "Holiday-mode time",
+          "non_workday_enabled": "Use non-workday time", "non_workday_time": "Non-workday time"
+        }
+      },
+      "behavior": {
+        "title": "Alarm lifecycle",
+        "description": "Repeat cadence and snooze are separate. Timeout covers the complete alarm session.",
+        "data": {
+          "pre_alarm_minutes": "Pre-alarm lead time (minutes)", "repeat_interval_minutes": "Repeat interval (minutes)",
+          "escalate_after_repeats": "Escalate after repeats (0 disables)", "snooze_minutes": "Snooze duration (minutes)",
+          "max_snoozes": "Maximum snoozes (0 disables)", "timeout_minutes": "Safety timeout (minutes)",
+          "terminal_state_minutes": "Keep final state visible (minutes)"
+        }
+      },
+      "guards": {
+        "title": "Conditions and blockers",
+        "description": "Clear a field to remove an existing link.",
+        "data": {
+          "workday_sensor": "Workday sensor", "vacation_entity": "Vacation-mode entity", "confirmation_sensor": "Wake-up confirmation sensor",
+          "block_non_workdays": "Block completely on non-workdays", "allow_entity": "Only allow when entity…", "allow_state": "…has this state",
+          "block_entity": "Block when entity…", "block_state": "…has this state"
+        }
+      },
+      "actions": {
+        "title": "Action phases",
+        "description": "Every phase is optional and uses normal Home Assistant actions.",
+        "data": {
+          "actions_prepare": "Prepare / pre-alarm", "actions_start": "Start", "actions_repeat": "Repeat", "actions_escalate": "Escalate",
+          "actions_snooze": "Snooze", "actions_dismiss": "Dismiss / confirmed", "actions_timeout": "Timeout", "actions_cleanup": "Cleanup"
+        }
+      }
+    },
+    "error": { "schedule_required": "Select a Schedule helper for this source." }
+  },
+  "entity": {
+    "binary_sensor": { "alarm_active": { "name": "Alarm session active" } },
+    "button": {
+      "dismiss": { "name": "Dismiss alarm" }, "snooze": { "name": "Snooze" },
+      "recalculate": { "name": "Clear override and recalculate" }
+    },
+    "datetime": { "next_alarm": { "name": "One-time next alarm" } },
+    "sensor": { "status": { "name": "Status", "state": {
+      "idle": "Idle", "scheduled": "Scheduled", "disabled": "Disabled", "vacation": "Vacation", "blocked": "Blocked",
+      "pre_alarm": "Pre-alarm", "ringing": "Ringing", "snoozed": "Snoozed", "dismissed": "Dismissed",
+      "skipped": "Skipped", "timeout": "Timed out", "error": "Error"
+    } } },
+    "switch": {
+      "enabled": { "name": "Enabled" }, "skip_next": { "name": "Skip next alarm" },
+      "holiday_mode": { "name": "Holiday mode" }
+    }
+  },
+  "selector": {
+    "schedule_source": { "options": { "weekly": "Clock Advanced weekly schedule", "schedule_entity": "Home Assistant Schedule helper" } }
+  }
+}

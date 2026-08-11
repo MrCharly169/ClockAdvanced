@@ -1,0 +1,172 @@
+{
+  "title": "Clock Advanced",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Erweiterten Wecker anlegen",
+        "description": "Schritt 1 von 7 · Gib diesem eigenständigen Wecker einen eindeutigen Raum- oder Verwendungsnamen. Der Assistent führt dich durch Zeiten, Bedingungen, Verhalten und Aktionen.",
+        "data": { "name": "Name" }
+      },
+      "source": {
+        "title": "Weckzeit-Quelle auswählen",
+        "description": "Schritt 2 von 7 · Verwende exakte Weckzeiten von Clock Advanced oder starte beim Wechsel eines Home-Assistant-Zeitplan-Helfers von Aus zu Ein.",
+        "data": { "schedule_source": "Weckzeit-Quelle" }
+      },
+      "helper_schedule": {
+        "title": "Zeitplan-Helfer auswählen",
+        "description": "Schritt 3 von 7 · Der Wecker startet am Beginn jedes aktiven Zeitblocks. Den Helfer erstellst oder bearbeitest du unter Einstellungen → Geräte & Dienste → Helfer.",
+        "data": { "schedule_entity": "Zeitplan-Helfer" }
+      },
+      "schedule": {
+        "title": "Wochenplan",
+        "description": "Schritt 3 von 7 · Aktiviere jeden Tag einzeln. Ferien- und Feiertagszeiten überschreiben nur aktivierte Tage.",
+        "data": {
+          "monday_enabled": "Montag aktiviert", "monday_time": "Montag – Uhrzeit",
+          "tuesday_enabled": "Dienstag aktiviert", "tuesday_time": "Dienstag – Uhrzeit",
+          "wednesday_enabled": "Mittwoch aktiviert", "wednesday_time": "Mittwoch – Uhrzeit",
+          "thursday_enabled": "Donnerstag aktiviert", "thursday_time": "Donnerstag – Uhrzeit",
+          "friday_enabled": "Freitag aktiviert", "friday_time": "Freitag – Uhrzeit",
+          "saturday_enabled": "Samstag aktiviert", "saturday_time": "Samstag – Uhrzeit",
+          "sunday_enabled": "Sonntag aktiviert", "sunday_time": "Sonntag – Uhrzeit",
+          "holiday_enabled": "Ferienzeit verwenden", "holiday_time": "Ferienzeit",
+          "non_workday_enabled": "Feiertagszeit verwenden", "non_workday_time": "Feiertagszeit"
+        }
+      },
+      "behavior": {
+        "title": "Weckablauf",
+        "description": "Schritt 5 von 7 · Wiederholungsrhythmus und Schlummern sind getrennt. Das Zeitlimit gilt für den gesamten Weckvorgang einschließlich Schlummern.",
+        "data": {
+          "pre_alarm_minutes": "Vorlauf Voralarm (Minuten)",
+          "repeat_interval_minutes": "Wiederholungsintervall (Minuten)",
+          "escalate_after_repeats": "Eskalation nach Wiederholungen (0 deaktiviert)",
+          "snooze_minutes": "Schlummerdauer (Minuten)",
+          "max_snoozes": "Maximales Schlummern (0 deaktiviert)",
+          "timeout_minutes": "Sicherheitsabschaltung (Minuten)",
+          "terminal_state_minutes": "Endstatus anzeigen (Minuten)"
+        }
+      },
+      "guards": {
+        "title": "Bedingungen und Sperren",
+        "description": "Schritt 4 von 7 · Ergänze nur benötigte Bedingungen. Komplexe Logik kannst du als Template-Binärsensor abbilden und hier als Freigabe oder Sperre auswählen.",
+        "data": {
+          "workday_sensor": "Arbeitstag-Sensor", "vacation_entity": "Urlaubsmodus-Entität",
+          "confirmation_sensor": "Aufsteh-Bestätigung",
+          "block_non_workdays": "An Nicht-Arbeitstagen vollständig sperren",
+          "allow_entity": "Nur freigeben, wenn Entität…",
+          "allow_state": "…diesen Zustand hat",
+          "block_entity": "Sperren, wenn Entität…",
+          "block_state": "…diesen Zustand hat"
+        },
+        "data_description": {
+          "workday_sensor": "Bei Aus verwendet ein heute aktivierter Wochentag die Feiertagszeit.",
+          "vacation_entity": "Bei Ein wird kein Wecker geplant und ein aktiver Wecker beendet.",
+          "confirmation_sensor": "Bei Ein während eines aktiven Weckers wird dieser als bestätigt beendet.",
+          "block_non_workdays": "Überschreibt die Feiertagszeit und sperrt den Wecker, sobald der Arbeitstag-Sensor Aus ist.",
+          "allow_entity": "Beispiele: Person, Anwesenheit, Gästemodus oder Template-Binärsensor.",
+          "allow_state": "Typische Zustände sind on oder home. Der Vergleich erfolgt exakt.",
+          "block_entity": "Beispiele: Ruhemodus, Kind schläft, Meetingmodus oder Template-Binärsensor.",
+          "block_state": "Typischer Zustand ist on. Der Vergleich erfolgt exakt."
+        }
+      },
+      "actions": {
+        "title": "Aktionsphasen",
+        "description": "Schritt 6 von 7 · Erstelle normale Home-Assistant-Aktionsfolgen. Alle Felder sind optional und erhalten die Variable clock_advanced.",
+        "data": {
+          "actions_prepare": "Vorbereiten / Voralarm", "actions_start": "Start",
+          "actions_repeat": "Wiederholen", "actions_escalate": "Eskalieren",
+          "actions_snooze": "Schlummern", "actions_dismiss": "Beenden / bestätigt",
+          "actions_timeout": "Zeitüberschreitung", "actions_cleanup": "Aufräumen"
+        }
+      },
+      "review": {
+        "title": "Prüfen und anlegen",
+        "description": "Schritt 7 von 7 · **{name}**\n\nWeckzeit-Quelle: `{source}`  \nKonfigurierte Bedingungen: **{guards}**  \nKonfigurierte Aktionsphasen: **{actions}**\n\nAlle Bereiche können später über die Integrationsoptionen geändert werden.",
+        "data": { "confirm": "Diesen Wecker anlegen" }
+      }
+    },
+    "error": {
+      "schedule_required": "Wähle für diese Quelle einen Zeitplan-Helfer aus.",
+      "confirmation_required": "Bestätige die Zusammenfassung, bevor dieser Wecker angelegt wird."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Clock-Advanced-Einstellungen",
+        "description": "Öffne einen Bereich. Nach dem Speichern wird nur dieser Wecker neu geladen.",
+        "menu_options": {
+          "source": "Weckzeit-Quelle", "schedule": "Wochenplan", "behavior": "Weckablauf",
+          "guards": "Optionale Bedingungen", "actions": "Aktionsphasen"
+        }
+      },
+      "source": {
+        "title": "Weckzeit-Quelle",
+        "description": "Wähle den internen Wochenplan oder einen Home-Assistant-Zeitplan-Helfer. Für die Helfer-Quelle muss ein Zeitplan ausgewählt sein.",
+        "data": { "schedule_source": "Weckzeit-Quelle", "schedule_entity": "Zeitplan-Helfer" }
+      },
+      "schedule": {
+        "title": "Wochenplan",
+        "description": "Aktiviere jeden Tag einzeln. Ferien- und Feiertagszeiten überschreiben nur aktivierte Tage.",
+        "data": {
+          "monday_enabled": "Montag aktiviert", "monday_time": "Montag – Uhrzeit",
+          "tuesday_enabled": "Dienstag aktiviert", "tuesday_time": "Dienstag – Uhrzeit",
+          "wednesday_enabled": "Mittwoch aktiviert", "wednesday_time": "Mittwoch – Uhrzeit",
+          "thursday_enabled": "Donnerstag aktiviert", "thursday_time": "Donnerstag – Uhrzeit",
+          "friday_enabled": "Freitag aktiviert", "friday_time": "Freitag – Uhrzeit",
+          "saturday_enabled": "Samstag aktiviert", "saturday_time": "Samstag – Uhrzeit",
+          "sunday_enabled": "Sonntag aktiviert", "sunday_time": "Sonntag – Uhrzeit",
+          "holiday_enabled": "Ferienzeit verwenden", "holiday_time": "Ferienzeit",
+          "non_workday_enabled": "Feiertagszeit verwenden", "non_workday_time": "Feiertagszeit"
+        }
+      },
+      "behavior": {
+        "title": "Weckablauf",
+        "description": "Wiederholungsrhythmus und Schlummern sind getrennt. Das Zeitlimit gilt für den gesamten Vorgang.",
+        "data": {
+          "pre_alarm_minutes": "Vorlauf Voralarm (Minuten)", "repeat_interval_minutes": "Wiederholungsintervall (Minuten)",
+          "escalate_after_repeats": "Eskalation nach Wiederholungen (0 deaktiviert)", "snooze_minutes": "Schlummerdauer (Minuten)",
+          "max_snoozes": "Maximales Schlummern (0 deaktiviert)", "timeout_minutes": "Sicherheitsabschaltung (Minuten)",
+          "terminal_state_minutes": "Endstatus anzeigen (Minuten)"
+        }
+      },
+      "guards": {
+        "title": "Bedingungen und Sperren",
+        "description": "Leere ein Feld, um eine bestehende Verknüpfung zu entfernen.",
+        "data": {
+          "workday_sensor": "Arbeitstag-Sensor", "vacation_entity": "Urlaubsmodus-Entität", "confirmation_sensor": "Aufsteh-Bestätigung",
+          "block_non_workdays": "An Nicht-Arbeitstagen vollständig sperren", "allow_entity": "Nur freigeben, wenn Entität…", "allow_state": "…diesen Zustand hat",
+          "block_entity": "Sperren, wenn Entität…", "block_state": "…diesen Zustand hat"
+        }
+      },
+      "actions": {
+        "title": "Aktionsphasen",
+        "description": "Jede Phase ist optional und verwendet normale Home-Assistant-Aktionen.",
+        "data": {
+          "actions_prepare": "Vorbereiten / Voralarm", "actions_start": "Start", "actions_repeat": "Wiederholen", "actions_escalate": "Eskalieren",
+          "actions_snooze": "Schlummern", "actions_dismiss": "Beenden / bestätigt", "actions_timeout": "Zeitüberschreitung", "actions_cleanup": "Aufräumen"
+        }
+      }
+    },
+    "error": { "schedule_required": "Wähle für diese Quelle einen Zeitplan-Helfer aus." }
+  },
+  "entity": {
+    "binary_sensor": { "alarm_active": { "name": "Weckvorgang aktiv" } },
+    "button": {
+      "dismiss": { "name": "Wecker beenden" }, "snooze": { "name": "Schlummern" },
+      "recalculate": { "name": "Abweichung löschen und neu berechnen" }
+    },
+    "datetime": { "next_alarm": { "name": "Einmaliger nächster Wecker" } },
+    "sensor": { "status": { "name": "Status", "state": {
+      "idle": "Bereit", "scheduled": "Geplant", "disabled": "Deaktiviert", "vacation": "Urlaub", "blocked": "Gesperrt",
+      "pre_alarm": "Voralarm", "ringing": "Weckt", "snoozed": "Schlummert", "dismissed": "Beendet",
+      "skipped": "Übersprungen", "timeout": "Zeitüberschreitung", "error": "Fehler"
+    } } },
+    "switch": {
+      "enabled": { "name": "Aktiviert" }, "skip_next": { "name": "Nächsten Wecker überspringen" },
+      "holiday_mode": { "name": "Ferienmodus" }
+    }
+  },
+  "selector": {
+    "schedule_source": { "options": { "weekly": "Clock-Advanced-Wochenplan", "schedule_entity": "Home-Assistant-Zeitplan-Helfer" } }
+  }
+}

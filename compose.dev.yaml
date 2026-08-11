@@ -1,0 +1,13 @@
+services:
+  homeassistant:
+    image: ${HA_DEV_IMAGE:-ghcr.io/home-assistant/home-assistant:2026.8.1}
+    container_name: clock-advanced-dev
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${HA_DEV_PORT:-18124}:8123"
+    volumes:
+      - ./.dev/ha-config:/config
+      - ./dev/configuration.yaml:/config/configuration.yaml:ro
+      - ./custom_components/clock_advanced:/config/custom_components/clock_advanced:ro
+    environment:
+      TZ: Europe/Luxembourg

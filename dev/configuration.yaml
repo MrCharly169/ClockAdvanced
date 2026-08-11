@@ -1,0 +1,41 @@
+default_config:
+
+homeassistant:
+  name: Clock Advanced Lab
+  unit_system: metric
+  time_zone: Europe/Luxembourg
+  country: LU
+  language: en
+  auth_providers:
+    - type: trusted_networks
+      trusted_networks:
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+      allow_bypass_login: true
+    - type: homeassistant
+
+input_boolean:
+  vacation_mode:
+    name: Vacation mode
+    initial: false
+  wake_confirmation:
+    name: Wake confirmation
+    initial: false
+  allow_alarm:
+    name: Allow alarm
+    initial: true
+  quiet_mode:
+    name: Quiet mode
+    initial: false
+
+template:
+  - binary_sensor:
+      - name: Lab workday
+        unique_id: clock_advanced_lab_workday
+        state: "{{ now().weekday() < 5 }}"
+      - name: Lab wake confirmation
+        unique_id: clock_advanced_lab_confirmation
+        state: "{{ is_state('input_boolean.wake_confirmation', 'on') }}"
+
+lovelace:
+  mode: storage

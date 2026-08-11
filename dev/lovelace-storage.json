@@ -1,0 +1,119 @@
+{
+  "title": "Clock Advanced Lab",
+  "views": [
+    {
+      "title": "Clock Lab",
+      "path": "clock-lab",
+      "icon": "mdi:alarm",
+      "type": "sections",
+      "max_columns": 3,
+      "badges": [
+        {
+          "type": "custom:clock-advanced-badge",
+          "entity": "sensor.clock_advanced_lab_status",
+          "language": "de"
+        }
+      ],
+      "sections": [
+        {
+          "type": "grid",
+          "cards": [
+            { "type": "heading", "heading": "Clock Advanced", "icon": "mdi:alarm" },
+            {
+              "type": "custom:clock-advanced-card",
+              "entity": "sensor.clock_advanced_lab_status",
+              "mode": "advanced",
+              "language": "de"
+            }
+          ]
+        },
+        {
+          "type": "grid",
+          "cards": [
+            { "type": "heading", "heading": "Native Schedule", "icon": "mdi:calendar-clock" },
+            {
+              "type": "custom:clock-advanced-card",
+              "entity": "sensor.schedule_helper_lab_status",
+              "mode": "easy",
+              "language": "de"
+            },
+            {
+              "type": "entities",
+              "title": "Editable Schedule helper",
+              "entities": [
+                "schedule.clock_advanced_lab",
+                "sensor.schedule_helper_lab_status"
+              ]
+            },
+            {
+              "type": "markdown",
+              "content": "Der Zeitplan ist ein nativer, über die HA-Oberfläche bearbeitbarer Schedule-Helfer. Ein neuer aktive Zeitblock startet genau einen Weckvorgang."
+            }
+          ]
+        },
+        {
+          "type": "grid",
+          "cards": [
+            { "type": "heading", "heading": "Live conditions", "icon": "mdi:shield-check" },
+            {
+              "type": "entities",
+              "title": "Immediate guards",
+              "entities": [
+                "sensor.schedule_helper_lab_status",
+                "input_boolean.vacation_mode",
+                "input_boolean.allow_alarm",
+                "input_boolean.quiet_mode",
+                "switch.schedule_helper_lab_enabled"
+              ]
+            },
+            {
+              "type": "entities",
+              "title": "Next occurrence and active alarm",
+              "entities": [
+                "switch.clock_advanced_lab_skip_next_alarm",
+                "switch.clock_advanced_lab_holiday_mode",
+                "input_boolean.wake_confirmation",
+                "button.clock_advanced_lab_snooze",
+                "button.clock_advanced_lab_dismiss_alarm"
+              ]
+            },
+            {
+              "type": "markdown",
+              "content": "Vacation, Allow, Quiet und Enabled ändern den Status sofort. Skip next und Holiday wirken auf den nächsten Termin. Wake confirmation, Snooze und Dismiss reagieren nur während eines aktiven Alarms."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Card modes",
+      "path": "card-modes",
+      "icon": "mdi:view-dashboard-edit",
+      "type": "sections",
+      "max_columns": 3,
+      "sections": [
+        {
+          "type": "grid",
+          "cards": [
+            { "type": "heading", "heading": "Compact", "icon": "mdi:card-outline" },
+            { "type": "custom:clock-advanced-card", "entity": "sensor.clock_advanced_lab_status", "mode": "compact", "language": "de" }
+          ]
+        },
+        {
+          "type": "grid",
+          "cards": [
+            { "type": "heading", "heading": "Easy", "icon": "mdi:view-agenda-outline" },
+            { "type": "custom:clock-advanced-card", "entity": "sensor.clock_advanced_lab_status", "mode": "easy", "language": "de" }
+          ]
+        },
+        {
+          "type": "grid",
+          "cards": [
+            { "type": "heading", "heading": "Advanced", "icon": "mdi:tune-variant" },
+            { "type": "custom:clock-advanced-card", "entity": "sensor.clock_advanced_lab_status", "mode": "advanced", "language": "de" }
+          ]
+        }
+      ]
+    }
+  ]
+}

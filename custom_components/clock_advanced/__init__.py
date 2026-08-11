@@ -1,0 +1,181 @@
+"""Clock Advanced integration and bundled frontend delivery."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from homeassistant.components.http import StaticPathConfig
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.event import async_call_later
+
+from .const import (
+    CARD_RESOURCE,
+    CONF_ALLOW_STATE,
+    CONF_BLOCK_NON_WORKDAYS,
+    CONF_BLOCK_STATE,
+    CONF_SCHEDULE_SOURCE,
+    DEFAULT_ALLOW_STATE,
+    DEFAULT_BLOCK_STATE,
+    DEFAULT_SCHEDULE_SOURCE,
+    DOMAIN,
+    PLATFORMS,
+    WEEKDAYS,
+    day_enabled_key,
+    day_time_key,
+)
+from .runtime import ClockRuntime
+
+type ClockAdvancedConfigEntry = ConfigEntry[ClockRuntime]
+
+
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Register the permanent card resource once."""
+    key = f"{DOMAIN}_frontend_registered"
+    if not hass.data.get(key):
+        frontend = Path(__file__).parent / "frontend"
+        await hass.http.async_register_static_paths(
+            [StaticPathConfig(f"/{DOMAIN}", str(frontend), False)]
+        )
+        hass.data[key] = True
+    return True
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ClockAdvancedConfigEntry) -> bool:
+    """Set up one clock and all of its standard entities."""
+    runtime = ClockRuntime(hass, entry)
+    entry.runtime_data = runtime
+    await runtime.async_start()
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    def schedule_card_notification(attempt: int = 0) -> None:
+        delays = (1, 3, 10, 30)
+        if runtime.state.card_notification_sent or attempt >= len(delays):
+            return
+
+        async def notify_card(_now) -> None:
+            if runtime.state.card_notification_sent:
+                return
+            registry = er.async_get(hass)
+            entity_id = registry.async_get_entity_id(
+                "sensor", DOMAIN, f"{entry.entry_id}_status"
+            )
+            if not entity_id:
+                schedule_card_notification(attempt + 1)
+                return
+            german = (hass.config.language or "en").lower().startswith("de")
+            card_yaml = (
+                "type: custom:clock-advanced-card\n"
+                f"entity: {entity_id}\n"
+                "mode: easy\n"
+                "language: auto\n"
+            )
+            badge_yaml = (
+                "type: custom:clock-advanced-badge\n"
+                f"entity: {entity_id}\n"
+                "language: auto\n"
+            )
+            title = (
+                f"Clock Advanced – Dashboard für {entry.title}"
+                if german
+                else f"Clock Advanced – dashboard for {entry.title}"
+            )
+            if german:
+                message = (
+                    "Der Wecker wurde erstellt. Die Karte und das Badge lassen sich "
+                    "über den grafischen Dashboard-Editor konfigurieren.\n\n"
+                    "**Empfohlene Easy-Karte:**\n\n"
+                    f"```yaml\n{card_yaml}```\n\n"
+                    "**Kleiner runder Home-Assistant-Badge:**\n\n"
+                    f"```yaml\n{badge_yaml}```\n\n"
+                    "**Einfügen:** Dashboard bearbeiten → Karte beziehungsweise Badge "
+                    "hinzufügen → Clock Advanced auswählen. Alternativ unter „Manuell“ "
+                    "den Code einfügen.\n\n"
+                    f"Falls Clock Advanced im Auswahldialog noch fehlt, unter "
+                    f"Einstellungen → Dashboards → Ressourcen `{CARD_RESOURCE}` einmalig "
+                    "als JavaScript-Modul registrieren.\n\n"
+                    "Hinweis: Der grafische Dashboard-Editor ist nur bei einem von Home "
+                    "Assistant verwalteten Dashboard verfügbar, nicht im YAML-Modus.\n\n"
+                    f"Status-Entität: `{entity_id}`"
+                )
+            else:
+                message = (
+                    "The alarm clock was created. Its card and badge can be configured "
+                    "with the graphical dashboard editor.\n\n"
+                    "**Recommended Easy card:**\n\n"
+                    f"```yaml\n{card_yaml}```\n\n"
+                    "**Small round Home Assistant badge:**\n\n"
+                    f"```yaml\n{badge_yaml}```\n\n"
+                    "**Add it:** Edit dashboard → Add card or badge → select Clock "
+                    "Advanced. Alternatively paste the code under Manual.\n\n"
+                    f"If Clock Advanced is not available in the picker yet, register "
+                    f"`{CARD_RESOURCE}` once as a JavaScript module under Settings → "
+                    "Dashboards → Resources.\n\n"
+                    "The graphical dashboard editor is available only for dashboards "
+                    "managed by Home Assistant, not YAML-mode dashboards.\n\n"
+                    f"Status entity: `{entity_id}`"
+                )
+            try:
+                await hass.services.async_call(
+                    "persistent_notification",
+                    "create",
+                    {
+                        "title": title,
+                        "message": message,
+                        "notification_id": f"clock_advanced_card_{entry.entry_id}",
+                    },
+                    blocking=True,
+                )
+            except Exception:  # Home Assistant may still be starting its service.
+                schedule_card_notification(attempt + 1)
+                return
+            await runtime.async_mark_card_notification_sent()
+
+        entry.async_on_unload(
+            async_call_later(hass, delays[attempt], notify_card)
+        )
+
+    schedule_card_notification()
+    return True
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ClockAdvancedConfigEntry) -> bool:
+    """Unload one clock cleanly."""
+    if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        return False
+    await entry.runtime_data.async_stop()
+    return True
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate the grouped prototype schedule to the seven-day schema."""
+    if entry.version >= 3:
+        return True
+
+    def migrate(values: dict) -> dict:
+        result = dict(values)
+        grouped = (
+            result.pop("mon_wed_time", "06:00:00"),
+            result.pop("thu_fri_time", "07:00:00"),
+            result.pop("weekend_time", "08:00:00"),
+        )
+        for index, day in enumerate(WEEKDAYS):
+            result.setdefault(day_enabled_key(day), True)
+            group = 0 if index <= 2 else 1 if index <= 4 else 2
+            result.setdefault(day_time_key(day), grouped[group])
+        if "occupancy_sensor" in result and "confirmation_sensor" not in result:
+            result["confirmation_sensor"] = result.pop("occupancy_sensor")
+        result.setdefault(CONF_SCHEDULE_SOURCE, DEFAULT_SCHEDULE_SOURCE)
+        result.setdefault(CONF_ALLOW_STATE, DEFAULT_ALLOW_STATE)
+        result.setdefault(CONF_BLOCK_STATE, DEFAULT_BLOCK_STATE)
+        result.setdefault(CONF_BLOCK_NON_WORKDAYS, False)
+        return result
+
+    hass.config_entries.async_update_entry(
+        entry,
+        data=migrate(dict(entry.data)),
+        options=migrate(dict(entry.options)) if entry.options else {},
+        version=3,
+    )
+    return True
