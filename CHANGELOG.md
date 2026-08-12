@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 2026.8.0 - 2026-08-12
+
+- Promoted the tested `2026.8.0b1` feature set to the first stable release on `main`.
+- Stable releases and tags on `main` no longer carry a beta suffix; beta tags remain prereleases from development.
+
 ## 2026.8.0b1 - 2026-08-12
 
 - Added Home Assistant's native condition editor for alarm start guards, including numeric-state rules such as `zone.home > 1` and nested AND/OR/NOT logic.
