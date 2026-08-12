@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 2026.8.1b3 - 2026-08-13
+
+- Split the customer-facing concepts clearly: **Holiday time / Ferienzeit** keeps the alarm enabled at its alternative schedule time, while **Vacation / Urlaub** blocks it completely.
+- Reorganized setup into ten short, situation-based steps and replaced the two large action pages with preparation/start, response/snooze, and finish/safety sections. The same structure is available later under Configure.
+- Added an optional evening-before reminder with a configurable delivery time and Clock dashboard path.
+- Added occurrence-safe mobile actions to skip exactly the announced alarm, change only that occurrence through an `HH:MM` text reply, or open the installed Clock Card. Stale notification actions cannot affect a newer alarm.
+- Kept Home Assistant's notification inbox as a recipient-free fallback with a direct Clock link; native mobile Notify entities receive the interactive actions.
+- Made Recalculate clear both one-time overrides and a previously skipped occurrence before returning to the recurring source.
+
 ## 2026.8.1b2 - 2026-08-13
 
 - Added an inline Advanced Card weekday editor with selectable day tiles, a five-minute day slider, exact native time input, and per-day enable/disable control.

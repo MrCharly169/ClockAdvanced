@@ -32,6 +32,9 @@ from .const import (
     CONF_NOTIFICATIONS_ENABLED,
     CONF_PRE_ALARM_MINUTES,
     CONF_REPEAT_INTERVAL_MINUTES,
+    CONF_REMINDER_DASHBOARD_PATH,
+    CONF_REMINDER_ENABLED,
+    CONF_REMINDER_TIME,
     CONF_SCHEDULE_ENTITY,
     CONF_SCHEDULE_SOURCE,
     CONF_SNOOZE_MINUTES,
@@ -52,6 +55,8 @@ from .const import (
     DEFAULT_NOTIFICATIONS_ENABLED,
     DEFAULT_PRE_ALARM_MINUTES,
     DEFAULT_REPEAT_INTERVAL_MINUTES,
+    DEFAULT_REMINDER_ENABLED,
+    DEFAULT_REMINDER_TIME,
     DEFAULT_SCHEDULE_SOURCE,
     DEFAULT_SNOOZE_MINUTES,
     DEFAULT_TERMINAL_STATE_MINUTES,
@@ -194,6 +199,45 @@ def _actions_schema() -> vol.Schema:
     )
 
 
+def _start_actions_schema() -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Optional(action_key("prepare"), default=[]): selector.ActionSelector(),
+            vol.Optional(action_key("start"), default=[]): selector.ActionSelector(),
+        }
+    )
+
+
+def _response_schema() -> vol.Schema:
+    fields = dict(_behavior_schema().schema)
+    for phase in ("repeat", "escalate", "snooze"):
+        fields[vol.Optional(action_key(phase), default=[])] = selector.ActionSelector()
+    return vol.Schema(fields)
+
+
+def _finish_actions_schema() -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Optional(action_key(phase), default=[]): selector.ActionSelector()
+            for phase in ("dismiss", "timeout", "cleanup")
+        }
+    )
+
+
+def _reminder_schema() -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_REMINDER_ENABLED, default=DEFAULT_REMINDER_ENABLED
+            ): selector.BooleanSelector(),
+            vol.Required(
+                CONF_REMINDER_TIME, default=DEFAULT_REMINDER_TIME
+            ): selector.TimeSelector(),
+            vol.Optional(CONF_REMINDER_DASHBOARD_PATH): selector.TextSelector(),
+        }
+    )
+
+
 def _notifications_schema() -> vol.Schema:
     return vol.Schema(
         {
@@ -273,7 +317,7 @@ class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> config_entries.ConfigFlowResult:
         if user_input is not None:
             self._data.update(user_input)
-            return await self.async_step_notifications()
+            return await self.async_step_reminder()
         return self.async_show_form(step_id="behavior", data_schema=_behavior_schema())
 
     async def async_step_guards(
@@ -281,7 +325,7 @@ class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> config_entries.ConfigFlowResult:
         if user_input is not None:
             self._data.update(user_input)
-            return await self.async_step_behavior()
+            return await self.async_step_start_actions()
         return self.async_show_form(step_id="guards", data_schema=_guards_schema())
 
     async def async_step_actions(
@@ -297,9 +341,37 @@ class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> config_entries.ConfigFlowResult:
         if user_input is not None:
             self._data.update(user_input)
-            return await self.async_step_actions()
+            return await self.async_step_finish_actions()
         return self.async_show_form(
             step_id="notifications", data_schema=_notifications_schema()
+        )
+
+    async def async_step_start_actions(self, user_input=None):
+        if user_input is not None:
+            self._data.update(user_input)
+            return await self.async_step_response()
+        return self.async_show_form(
+            step_id="start_actions", data_schema=_start_actions_schema()
+        )
+
+    async def async_step_response(self, user_input=None):
+        if user_input is not None:
+            self._data.update(user_input)
+            return await self.async_step_reminder()
+        return self.async_show_form(step_id="response", data_schema=_response_schema())
+
+    async def async_step_reminder(self, user_input=None):
+        if user_input is not None:
+            self._data.update(user_input)
+            return await self.async_step_notifications()
+        return self.async_show_form(step_id="reminder", data_schema=_reminder_schema())
+
+    async def async_step_finish_actions(self, user_input=None):
+        if user_input is not None:
+            self._data.update(user_input)
+            return await self.async_step_review()
+        return self.async_show_form(
+            step_id="finish_actions", data_schema=_finish_actions_schema()
         )
 
     async def async_step_review(
@@ -358,6 +430,11 @@ class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             "guards": str(guard_count),
             "actions": str(action_count),
             "notifications": notification_summary,
+            "reminder": (
+                str(self._data.get(CONF_REMINDER_TIME, DEFAULT_REMINDER_TIME))[:5]
+                if self._data.get(CONF_REMINDER_ENABLED)
+                else "off"
+            ),
         }
 
     @staticmethod
@@ -380,9 +457,11 @@ class ClockAdvancedOptionsFlow(config_entries.OptionsFlowWithReload):
                 "source",
                 "schedule",
                 "guards",
-                "behavior",
+                "start_actions",
+                "response",
+                "reminder",
                 "notifications",
-                "actions",
+                "finish_actions",
             ],
         )
 
@@ -436,6 +515,45 @@ class ClockAdvancedOptionsFlow(config_entries.OptionsFlowWithReload):
             return self._save(user_input)
         return self.async_show_form(
             step_id="behavior", data_schema=self._with_suggestions(_behavior_schema())
+        )
+
+    async def async_step_start_actions(self, user_input=None):
+        keys = (action_key("prepare"), action_key("start"))
+        if user_input is not None:
+            return self._save(user_input, keys)
+        return self.async_show_form(
+            step_id="start_actions",
+            data_schema=self._with_suggestions(_start_actions_schema()),
+        )
+
+    async def async_step_response(self, user_input=None):
+        if user_input is not None:
+            return self._save(user_input)
+        return self.async_show_form(
+            step_id="response",
+            data_schema=self._with_suggestions(_response_schema()),
+        )
+
+    async def async_step_reminder(self, user_input=None):
+        keys = (
+            CONF_REMINDER_ENABLED,
+            CONF_REMINDER_TIME,
+            CONF_REMINDER_DASHBOARD_PATH,
+        )
+        if user_input is not None:
+            return self._save(user_input, keys)
+        return self.async_show_form(
+            step_id="reminder",
+            data_schema=self._with_suggestions(_reminder_schema()),
+        )
+
+    async def async_step_finish_actions(self, user_input=None):
+        keys = tuple(action_key(phase) for phase in ("dismiss", "timeout", "cleanup"))
+        if user_input is not None:
+            return self._save(user_input, keys)
+        return self.async_show_form(
+            step_id="finish_actions",
+            data_schema=self._with_suggestions(_finish_actions_schema()),
         )
 
     async def async_step_guards(self, user_input=None):

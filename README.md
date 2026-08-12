@@ -11,7 +11,7 @@ Deutsch: Clock Advanced ist eine generische Home-Assistant-Weckerintegration mit
 ## Core contract / Kernvertrag
 
 - seven independently enabled weekdays / sieben einzeln aktivierbare Wochentage
-- optional holiday and current non-workday overrides / optionale Ferien- und Feiertagszeiten
+- distinct Holiday-time and Vacation behavior / getrennte Ferienzeit- und Urlaubslogik
 - one-time alarm through a standard `datetime` entity / einmaliger Wecker über eine Standard-`datetime`-Entität
 - states `scheduled`, `pre_alarm`, `ringing`, `snoozed`, `dismissed`, `skipped`, `timeout`, and guarded states
 - true snooze separate from repeating actions / echtes Schlummern getrennt von Wiederholungsaktionen
@@ -22,9 +22,9 @@ Deutsch: Clock Advanced ist eine generische Home-Assistant-Weckerintegration mit
 
 ## Guided setup / Geführte Einrichtung
 
-The UI wizard deliberately walks through seven small decisions: name, alarm source, schedule, conditions, lifecycle behavior, actions, and a final review. Every setting remains editable later from the integration options.
+The UI wizard deliberately walks through ten small, customer-oriented decisions: name, alarm source, schedule, conditions, preparation/start, alarm response, evening reminder, notifications, finish/safety, and a final review. Every setting remains editable later from the integration options, grouped by the same situations.
 
-Clock Advanced ist eine normale Integration unter **Einstellungen → Geräte & Dienste → Integrationen** – kein Helper. Der UI-Assistent führt bewusst in sieben übersichtlichen Schritten durch Name, Weckzeit-Quelle, Zeitplan, Bedingungen, Ablaufverhalten, Aktionen und eine abschließende Prüfung. Name und alle Funktionsbereiche bleiben danach über **Konfigurieren** in den gegliederten Integrationsoptionen änderbar.
+Clock Advanced ist eine normale Integration unter **Einstellungen → Geräte & Dienste → Integrationen** – kein Helper. Der UI-Assistent führt in zehn kurzen, kundenorientierten Schritten durch Name, Weckzeit-Quelle, Zeitplan, Bedingungen, Vorbereitung/Start, Reaktion/Schlummern, Vorabend-Erinnerung, Meldungen, Abschluss/Sicherheit und eine abschließende Prüfung. Dieselben Bereiche bleiben danach über **Konfigurieren** änderbar.
 
 ### Alarm sources / Weckzeit-Quellen
 
@@ -44,6 +44,8 @@ Conditions are checked before preparation and alarm start, and an active alarm i
 - manual skip-next, holiday mode, enabled switch, maximum snoozes, escalation threshold, and safety timeout
 
 Die Bedingungen werden vor Vorbereitung und Weckstart geprüft. Wird während eines laufenden Weckers eine Sperre aktiv, beendet Clock Advanced die Session sicher. Damit lassen sich unter anderem Anwesenheit, Ruhemodus, Arbeitstag, Ferien, Feiertage oder beliebige andere HA-Zustände ohne fest eingebaute Entitätsnamen kombinieren.
+
+**Holiday time / Ferienzeit** and **Vacation / Urlaub** are deliberately different. Holiday time keeps the clock enabled and applies the alternative, usually later time from its schedule. Vacation is a true blocker that disables preparation and alarm output completely. Both controls remain independent.
 
 ## Action phases / Aktionsphasen
 
@@ -66,9 +68,9 @@ The integration also fires `clock_advanced_phase` for every phase, including `sk
 
 ## Notifications / Benachrichtigungen
 
-The setup wizard has a dedicated notification step. Enable notifications, select the meaningful alarm events, and optionally select one or more native `notify.*` entities such as phones. Clock Advanced generates the localized title and the concrete reason automatically. If no recipient is selected, it uses Home Assistant's notification inbox instead. The same controls remain available later under the integration's **Notifications** options section.
+The setup wizard separates the evening-before reminder from alarm lifecycle messages. The optional reminder announces tomorrow's exact alarm and can open the configured Card path. Native mobile `notify.*` recipients also get actions to skip that exact occurrence or replace only its time through an `HH:MM` reply. Actions from an older notification are ignored. If no recipient is selected, Home Assistant's notification inbox receives a direct Clock link instead. Lifecycle notifications remain independently selectable.
 
-Der Einrichtungsassistent besitzt einen eigenen Schritt für Benachrichtigungen. Aktiviere Meldungen, wähle die gewünschten Weckereignisse und optional eine oder mehrere native `notify.*`-Entitäten wie Smartphones. Clock Advanced erzeugt Titel und konkreten Grund automatisch auf Deutsch oder Englisch. Ohne ausgewählten Empfänger wird der Home-Assistant-Benachrichtigungseingang verwendet. Dieselben Einstellungen sind später unter **Benachrichtigungen** in den Integrationsoptionen änderbar.
+Der Einrichtungsassistent trennt die Vorabend-Erinnerung von den Meldungen während des Weckablaufs. Die optionale Erinnerung nennt den exakten Wecker für morgen und öffnet den eingestellten Pfad zur Clock-Card. Native mobile `notify.*`-Empfänger erhalten zusätzlich **Auslassen** und **Zeit ändern**; die Texteingabe `HH:MM` ändert nur diesen einen Termin. Veraltete Aktionen werden ignoriert. Ohne Empfänger erscheint die Erinnerung mit direktem Clock-Link im Home-Assistant-Benachrichtigungseingang.
 
 ### Example: music, snooze, escalation, motion / Beispiel: Musik, Snooze, Eskalation, Bewegung
 

@@ -148,6 +148,28 @@ class PackageTests(unittest.TestCase):
         self.assertIn('self._launch_notification("blocked"', runtime)
         self.assertIn("CONF_NOTIFICATION_TARGETS", diagnostics)
 
+    def test_actionable_evening_reminder_is_occurrence_safe(self) -> None:
+        config_flow = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
+        runtime = (COMPONENT / "runtime.py").read_text(encoding="utf-8")
+        translations = (COMPONENT / "translations" / "de.json").read_text(
+            encoding="utf-8"
+        )
+        for token in (
+            "CONF_REMINDER_ENABLED",
+            "CONF_REMINDER_TIME",
+            "CONF_REMINDER_DASHBOARD_PATH",
+            "async_step_reminder",
+        ):
+            self.assertIn(token, config_flow)
+        self.assertIn("EVENT_NOTIFICATION_ACTION", runtime)
+        self.assertIn("CLOCK_ADVANCED:{self.entry.entry_id}:SKIP", runtime)
+        self.assertIn("CLOCK_ADVANCED:{self.entry.entry_id}:CHANGE", runtime)
+        self.assertIn('"behavior": "textInput"', runtime)
+        self.assertIn('"action": "URI"', runtime)
+        self.assertIn("int(current.timestamp()) != token", runtime)
+        self.assertIn("Ferienzeit verschiebt die Uhrzeit", translations)
+        self.assertIn('"holiday_mode": { "name": "Ferienzeit" }', translations)
+
     def test_card_weekday_editor_and_native_vacation_are_shipped(self) -> None:
         init = (COMPONENT / "__init__.py").read_text(encoding="utf-8")
         runtime = (COMPONENT / "runtime.py").read_text(encoding="utf-8")

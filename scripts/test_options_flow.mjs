@@ -98,15 +98,23 @@ try {
   wizard = await submitFlow(wizard, defaults(wizard));
   if (wizard.step_id !== "guards") throw new Error(`Expected guards, got ${wizard.step_id}`);
   wizard = await submitFlow(wizard, defaults(wizard));
-  if (wizard.step_id !== "behavior") throw new Error(`Expected behavior, got ${wizard.step_id}`);
+  if (wizard.step_id !== "start_actions") throw new Error(`Expected start actions, got ${wizard.step_id}`);
   wizard = await submitFlow(wizard, defaults(wizard));
+  if (wizard.step_id !== "response") throw new Error(`Expected response, got ${wizard.step_id}`);
+  wizard = await submitFlow(wizard, defaults(wizard));
+  if (wizard.step_id !== "reminder") throw new Error(`Expected reminder, got ${wizard.step_id}`);
+  wizard = await submitFlow(wizard, {
+    next_alarm_reminder_enabled: true,
+    next_alarm_reminder_time: "19:00:00",
+    dashboard_path: "/lovelace/clock-lab",
+  });
   if (wizard.step_id !== "notifications") throw new Error(`Expected notifications, got ${wizard.step_id}`);
   wizard = await submitFlow(wizard, {
     notifications_enabled: true,
     notification_targets: [],
     notification_events: ["start", "blocked"],
   });
-  if (wizard.step_id !== "actions") throw new Error(`Expected actions, got ${wizard.step_id}`);
+  if (wizard.step_id !== "finish_actions") throw new Error(`Expected finish actions, got ${wizard.step_id}`);
   wizard = await submitFlow(wizard, defaults(wizard));
   if (wizard.step_id !== "review" || wizard.last_step !== true) {
     throw new Error(`Expected final review, got ${wizard.step_id}`);
@@ -114,13 +122,19 @@ try {
   if (!wizard.description_placeholders?.notifications?.includes("2")) {
     throw new Error("The final review does not summarize configured notifications");
   }
+  if (!wizard.description_placeholders?.reminder?.includes("19:00")) {
+    throw new Error("The final review does not summarize the evening reminder");
+  }
 
   const flow = await request(`${baseUrl}/api/config/config_entries/options/flow`, {
     method: "POST",
     headers,
     body: JSON.stringify({ handler: entry.entry_id }),
   });
-  const expected = ["source", "schedule", "guards", "behavior", "notifications", "actions"];
+  const expected = [
+    "source", "schedule", "guards", "start_actions", "response",
+    "reminder", "notifications", "finish_actions",
+  ];
   if (flow.type !== "menu" || flow.step_id !== "init") {
     throw new Error(`Expected the options menu, got ${flow.type}:${flow.step_id}`);
   }
@@ -161,6 +175,20 @@ try {
     if (!notificationFields.includes(field)) {
       throw new Error(`The notification options section is missing ${field}`);
     }
+  }
+
+  const reminderFlow = await request(`${baseUrl}/api/config/config_entries/options/flow`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ handler: entry.entry_id }),
+  });
+  const reminderStep = await request(
+    `${baseUrl}/api/config/config_entries/options/flow/${reminderFlow.flow_id}`,
+    { method: "POST", headers, body: JSON.stringify({ next_step_id: "reminder" }) },
+  );
+  const reminderFields = reminderStep.data_schema.map((field) => field.name);
+  for (const field of ["next_alarm_reminder_enabled", "next_alarm_reminder_time", "dashboard_path"]) {
+    if (!reminderFields.includes(field)) throw new Error(`Reminder section is missing ${field}`);
   }
   console.log("Clock Advanced setup wizard and integration options flow: PASS");
 } finally {

@@ -79,7 +79,7 @@
             },
             {
               "type": "markdown",
-              "content": "Vacation, Allow, Quiet und Enabled ändern den Status sofort. Skip next und Holiday wirken auf den nächsten Termin. Wake confirmation, Snooze und Dismiss reagieren nur während eines aktiven Alarms."
+              "content": "Urlaub, Freigabe, Ruhemodus und Aktiv ändern den Status sofort. Nächsten auslassen und Ferienzeit wirken auf den nächsten Termin. Aufstehbestätigung, Schlummern und Beenden reagieren nur während eines aktiven Alarms."
             }
           ]
         }
