@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 2026.8.1b0 - 2026-08-12
+
+- Stopped Card rerenders caused only by Home Assistant's `last_updated` timestamp; the Card now rebuilds its DOM only when visible data actually changes.
+- Reduced Badge rerenders to its visible status, title, and alarm timing instead of comparing the complete entity attribute payload.
+- Reserved a stable countdown width and aligned Compact, Easy, and Advanced Sections-grid sizing with their measured rendered heights.
+- Added regression coverage proving irrelevant HA updates no longer replace Card or Badge DOM nodes.
+
 ## 2026.8.0 - 2026-08-12
 
 - Promoted the tested `2026.8.0b1` feature set to the first stable release on `main`.

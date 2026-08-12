@@ -167,17 +167,35 @@ class ClockAdvancedCard extends HTMLElement {
     this._hass = value;
     const state = value?.states?.[this._config?.entity];
     const controls = state?.attributes?.controls || {};
+    const attrs = state?.attributes || {};
+    const guardEntities = Object.values(attrs.guards || {})
+      .filter((entityId) => typeof entityId === "string");
+    const related = [...new Set([...Object.values(controls), ...guardEntities])]
+      .map((entityId) => {
+        const relatedState = value?.states?.[entityId];
+        return [entityId, relatedState?.state, relatedState?.attributes?.friendly_name];
+      });
     const signature = state ? JSON.stringify([
-      state.state,
-      state.last_updated,
-      state.attributes.next_alarm,
-      state.attributes.snooze_until,
-      state.attributes.controls,
-      state.attributes.schedule,
-      Object.values(controls).map((entityId) => value.states[entityId]?.state),
       this._config,
       value.language,
-    ]) : "missing";
+      state.state,
+      attrs.name,
+      attrs.friendly_name,
+      attrs.next_alarm,
+      attrs.pre_alarm_at,
+      attrs.active_since,
+      attrs.snooze_until,
+      attrs.repeat_count,
+      attrs.snooze_count,
+      attrs.snooze_available,
+      attrs.escalated,
+      attrs.schedule_source,
+      attrs.schedule,
+      attrs.controls,
+      attrs.guards,
+      attrs.settings,
+      related,
+    ]) : JSON.stringify([this._config, value.language, "missing"]);
     if (signature !== this._signature) {
       this._signature = signature;
       this._render();
@@ -197,15 +215,15 @@ class ClockAdvancedCard extends HTMLElement {
 
   getCardSize() {
     const mode = this._mode();
-    return mode === "compact" ? 4 : mode === "easy" ? 7 : 10;
+    return mode === "compact" ? 4 : mode === "easy" ? 7 : 14;
   }
 
   getGridOptions() {
     const mode = this._mode();
     return {
-      rows: mode === "compact" ? 4 : mode === "easy" ? 7 : 10,
+      rows: mode === "compact" ? 4 : mode === "easy" ? 7 : 14,
       columns: mode === "compact" ? 6 : 12,
-      min_rows: mode === "compact" ? 3 : mode === "easy" ? 5 : 8,
+      min_rows: mode === "compact" ? 4 : mode === "easy" ? 7 : 12,
       min_columns: mode === "compact" ? 4 : 6,
     };
   }
@@ -409,7 +427,7 @@ class ClockAdvancedCard extends HTMLElement {
       main { padding:20px 0 15px; }
       .time { font-size:2.75rem; line-height:.95; font-weight:680; letter-spacing:-.055em; font-variant-numeric:tabular-nums; }
       .context { justify-content:space-between; gap:8px; margin-top:9px; color:var(--secondary-text-color); font-size:.72rem; }
-      .countdown { color:var(--ca-accent); font-size:.66rem; font-variant-numeric:tabular-nums; white-space:nowrap; }
+      .countdown { flex:0 0 13ch; min-width:13ch; color:var(--ca-accent); font-size:.66rem; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; }
       .metrics { display:flex; gap:12px; margin-top:8px; font-size:.68rem; color:var(--secondary-text-color); }
       .progress-panel { display:grid; gap:10px; padding:12px; border-radius:15px; background:color-mix(in srgb,var(--secondary-background-color) 88%,#64748b 12%); }
       .progress-row { gap:10px; }
@@ -441,7 +459,7 @@ class ClockAdvancedCard extends HTMLElement {
       .compact .progress-panel,.compact .schedule,.compact .toggles,.compact .details { display:none; }
       .compact main { padding-bottom:4px; }
       .easy .schedule,.easy .details { display:none; }
-      @container (max-width:300px) { ha-card { padding:13px; border-radius:19px; } .time { font-size:2.45rem; } .brand { font-size:.62rem; } .status-pill { padding:7px 9px; } .context { align-items:flex-start; flex-direction:column; } }
+      @container (max-width:300px) { ha-card { padding:13px; border-radius:19px; } .time { font-size:2.45rem; } .brand { font-size:.62rem; } .status-pill { padding:7px 9px; } .context { align-items:flex-start; flex-direction:column; } .countdown { flex-basis:auto; min-width:0; text-align:left; } }
       @media (prefers-reduced-motion:reduce) { * { animation:none!important; transition:none!important; } }
     </style>`;
   }
@@ -516,15 +534,18 @@ class ClockAdvancedBadge extends HTMLElement {
   set hass(value) {
     this._hass = value;
     const entity = value?.states?.[this._config.entity];
-    const controls = entity?.attributes?.controls || {};
-    const related = Object.values(controls).map((entityId) => {
-      const state = value?.states?.[entityId];
-      return [entityId, state?.state, state?.last_changed];
-    });
+    const attrs = entity?.attributes || {};
     let signature;
     try {
       signature = JSON.stringify([
-        this._config, value?.language || "en", entity?.state, entity?.attributes, related,
+        this._config,
+        value?.language || "en",
+        entity?.state,
+        attrs.name,
+        attrs.friendly_name,
+        attrs.next_alarm,
+        attrs.snooze_until,
+        attrs.active_since,
       ]);
     } catch (_error) {
       signature = `${this._config.entity || ""}:${entity?.state || ""}:${entity?.last_changed || ""}`;

@@ -46,7 +46,7 @@ global.document = { createElement(name) { const Ctor = registry.get(name); retur
   if (!registry.get("clock-advanced-card-editor")) throw new Error("Editor was not registered");
   const Badge = registry.get("clock-advanced-badge");
   if (!Badge || !registry.get("clock-advanced-badge-editor")) throw new Error("Badge was not registered");
-  const hass = { states: { "sensor.clock_status": { state: "scheduled", attributes: { card_contract: 1, card_type: "custom:clock-advanced-card", controls: {}, schedule: [], name: "Bedroom clock", next_alarm: "2031-06-21T06:00:00+00:00" } } }, language: "en", callService: async () => {} };
+  const hass = { states: { "sensor.clock_status": { state: "scheduled", last_updated: "2031-06-20T05:00:00+00:00", attributes: { card_contract: 1, card_type: "custom:clock-advanced-card", controls: {}, schedule: [], name: "Bedroom clock", next_alarm: "2031-06-21T06:00:00+00:00" } } }, language: "en", callService: async () => {} };
   const stub = Card.getStubConfig(hass);
   if (stub.entity !== "sensor.clock_status") throw new Error("Stub did not discover the status entity");
   if (stub.mode !== "easy") throw new Error("Easy is not the default Card mode");
@@ -54,6 +54,20 @@ global.document = { createElement(name) { const Ctor = registry.get(name); retur
   instance.setConfig(stub);
   instance.hass = hass;
   if (instance.getCardSize() !== 7 || instance.getGridOptions().columns !== 12 || instance.getGridOptions().rows !== 7) throw new Error("Sizing API is invalid");
+  instance.setConfig({ ...stub, mode: "advanced" });
+  instance.hass = hass;
+  if (instance.getCardSize() !== 14 || instance.getGridOptions().rows !== 14 || instance.getGridOptions().min_rows !== 12) throw new Error("Advanced sizing does not reserve its rendered height");
+  const cardRenderCount = instance.shadowRoot.writeCount;
+  instance.hass = { ...hass, states: { ...hass.states, "sensor.clock_status": {
+    ...hass.states["sensor.clock_status"], last_updated: "2031-06-20T05:00:01+00:00",
+  } } };
+  if (instance.shadowRoot.writeCount !== cardRenderCount) throw new Error("Card rerendered for an irrelevant last_updated-only change");
+  instance.hass = { ...hass, states: { ...hass.states, "sensor.clock_status": {
+    ...hass.states["sensor.clock_status"], attributes: {
+      ...hass.states["sensor.clock_status"].attributes, next_alarm: "2031-06-21T06:05:00+00:00",
+    },
+  } } };
+  if (instance.shadowRoot.writeCount !== cardRenderCount + 1) throw new Error("Card ignored a visible alarm-time change");
   if (!Card.getConfigElement()) throw new Error("Editor API failed");
   const registration = window.customCards.find((item) => item.type === "clock-advanced-card");
   if (!registration) throw new Error("Card picker registration missing");
@@ -75,6 +89,11 @@ global.document = { createElement(name) { const Ctor = registry.get(name); retur
   const renderCount = badge.shadowRoot.writeCount;
   badge.hass = hass;
   if (badge.shadowRoot.writeCount !== renderCount) throw new Error("Badge rerendered although its relevant state did not change");
+  badge.hass = { ...hass, states: { ...hass.states, "sensor.clock_status": {
+    ...hass.states["sensor.clock_status"], last_updated: "2031-06-20T05:00:01+00:00",
+    attributes: { ...hass.states["sensor.clock_status"].attributes, diagnostic_only: "changed" },
+  } } };
+  if (badge.shadowRoot.writeCount !== renderCount) throw new Error("Badge rerendered for invisible timestamp or diagnostic changes");
   const badgeModeCases = {
     idle: "mdi:minus", scheduled: "mdi:calendar-check", disabled: "mdi:power",
     vacation: "mdi:palm-tree", pre_alarm: "mdi:weather-sunset-up", ringing: "mdi:bell-ring",
