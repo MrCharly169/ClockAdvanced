@@ -64,6 +64,12 @@ Jede optionale Phase verwendet den normalen Home-Assistant-Aktionseditor und erh
 
 The integration also fires `clock_advanced_phase` for every phase, including `skipped` and `error`. Event data includes `contract_version`, `config_entry_id`, `name`, `status`, `phase`, `next_alarm`, repeat/snooze counts and escalation state.
 
+## Notifications / Benachrichtigungen
+
+The setup wizard has a dedicated notification step. Enable notifications, select the meaningful alarm events, and optionally select one or more native `notify.*` entities such as phones. Clock Advanced generates the localized title and the concrete reason automatically. If no recipient is selected, it uses Home Assistant's notification inbox instead. The same controls remain available later under the integration's **Notifications** options section.
+
+Der Einrichtungsassistent besitzt einen eigenen Schritt für Benachrichtigungen. Aktiviere Meldungen, wähle die gewünschten Weckereignisse und optional eine oder mehrere native `notify.*`-Entitäten wie Smartphones. Clock Advanced erzeugt Titel und konkreten Grund automatisch auf Deutsch oder Englisch. Ohne ausgewählten Empfänger wird der Home-Assistant-Benachrichtigungseingang verwendet. Dieselben Einstellungen sind später unter **Benachrichtigungen** in den Integrationsoptionen änderbar.
+
 ### Example: music, snooze, escalation, motion / Beispiel: Musik, Snooze, Eskalation, Bewegung
 
 In **Alarm lifecycle / Weckablauf**, set Snooze duration to `10`, maximum snoozes to at least `3`, Escalate after snoozes to `3`, and Escalate after repeats to `0` if only snoozes should trigger escalation. In **Action phases / Aktionsphasen**:
@@ -117,6 +123,8 @@ Die Ressourcen-URL ist dauerhaft und besitzt bewusst keinen Versionsparameter. D
 
 Card and Badge build their runtime Shadow DOM exactly once. Normal Home Assistant updates patch only visible text, semantic classes, attributes, button states, visibility and progress widths; the one-second timer changes only the existing countdown node's `textContent`. Interactive roots are not replaced, so focus and open details survive entity updates and the components never request page scrolling.
 
+Advanced mode also edits the built-in weekly schedule directly: select a weekday, drag the five-minute time slider, refine the value in the time field, and enable or disable that day. Saving calls the integration's own schedule service and recalculates without an integration reload. The bottom Vacation button controls the integration-owned Vacation mode by default; when an external vacation entity was explicitly configured, the same button controls that shared entity instead.
+
 ## Entities / Entitäten
 
 Every clock creates:
@@ -124,7 +132,7 @@ Every clock creates:
 - enum sensor: public status and Card contract
 - binary sensor: active alarm session
 - datetime: one-time next alarm
-- switches: enabled, skip next, holiday mode
+- switches: enabled, skip next, holiday mode, vacation mode
 - buttons: snooze, dismiss, recalculate
 
 ## Migration from the original automation

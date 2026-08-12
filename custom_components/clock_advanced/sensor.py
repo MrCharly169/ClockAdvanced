@@ -93,6 +93,7 @@ class ClockStatusSensor(ClockAdvancedEntity, SensorEntity):
             "enabled": self._entity("switch", "enabled"),
             "skip_next": self._entity("switch", "skip_next"),
             "holiday_mode": self._entity("switch", "holiday_mode"),
+            "vacation_mode": self._entity("switch", "vacation_mode"),
             "next_alarm": self._entity("datetime", "next_alarm"),
             "dismiss": self._entity("button", "dismiss"),
             "snooze": self._entity("button", "snooze"),

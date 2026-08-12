@@ -2,6 +2,7 @@ const CARD_TAG = "clock-advanced-card";
 const EDITOR_TAG = "clock-advanced-card-editor";
 const BADGE_TAG = "clock-advanced-badge";
 const BADGE_EDITOR_TAG = "clock-advanced-badge-editor";
+const WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
 const TEXT = {
   en: {
@@ -14,9 +15,13 @@ const TEXT = {
     enabled: "Enabled",
     skip: "Skip next",
     holiday: "Holiday",
+    vacationMode: "Vacation",
     snooze: "Snooze",
     dismiss: "Dismiss",
     schedule: "Weekly schedule",
+    alarmTime: "Alarm time",
+    dayActive: "Day active",
+    dayInactive: "Day inactive",
     repeats: "repeats",
     snoozes: "snoozes",
     configure: "Open details",
@@ -76,9 +81,13 @@ const TEXT = {
     enabled: "Aktiv",
     skip: "Nächsten auslassen",
     holiday: "Ferien",
+    vacationMode: "Urlaub",
     snooze: "Schlummern",
     dismiss: "Beenden",
     schedule: "Wochenplan",
+    alarmTime: "Weckzeit",
+    dayActive: "Tag aktiv",
+    dayInactive: "Tag inaktiv",
     repeats: "Wiederholungen",
     snoozes: "Schlummern",
     configure: "Details öffnen",
@@ -139,8 +148,11 @@ class ClockAdvancedCard extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
     this._detailsOpen = true;
+    this._selectedDay = 0;
+    this._scheduleDraft = null;
     this._onClick = this._onClick.bind(this);
-    this.shadowRoot.addEventListener("click", this._onClick);
+    this._onInput = this._onInput.bind(this);
+    this._onChange = this._onChange.bind(this);
   }
 
   static getConfigElement() {
@@ -174,20 +186,20 @@ class ClockAdvancedCard extends HTMLElement {
     const controlStates = Object.entries(controls).map(([key, entityId]) => [
       key,
       entityId,
-      ["enabled", "skip_next", "holiday_mode"].includes(key)
+      ["enabled", "skip_next", "holiday_mode", "vacation_mode"].includes(key)
         ? value?.states?.[entityId]?.state
         : undefined,
     ]);
     const visibleGuardKeys = advanced
-      ? ["workday", "confirmation", "allow", "block"]
-      : ["workday"];
+      ? ["workday", "vacation", "confirmation", "allow", "block"]
+      : ["workday", "vacation"];
     const guardStates = visibleGuardKeys.map((key) => {
       const entityId = guards[key];
       const relatedState = value?.states?.[entityId];
       return [
         key,
         entityId,
-        key === "workday" ? relatedState?.state : undefined,
+        ["workday", "vacation"].includes(key) ? relatedState?.state : undefined,
         relatedState?.attributes?.friendly_name,
       ];
     });
@@ -234,15 +246,15 @@ class ClockAdvancedCard extends HTMLElement {
 
   getCardSize() {
     const mode = this._mode();
-    return mode === "compact" ? 4 : mode === "easy" ? 7 : 14;
+    return mode === "compact" ? 4 : mode === "easy" ? 7 : 18;
   }
 
   getGridOptions() {
     const mode = this._mode();
     return {
-      rows: mode === "compact" ? 4 : mode === "easy" ? 7 : 14,
+      rows: mode === "compact" ? 4 : mode === "easy" ? 7 : 18,
       columns: mode === "compact" ? 6 : 12,
-      min_rows: mode === "compact" ? 4 : mode === "easy" ? 7 : 12,
+      min_rows: mode === "compact" ? 4 : mode === "easy" ? 7 : 16,
       min_columns: mode === "compact" ? 4 : 6,
     };
   }
@@ -316,9 +328,20 @@ class ClockAdvancedCard extends HTMLElement {
             <div class="progress-row"><span data-prepare-label></span><div class="track"><i data-prepare-progress></i></div></div>
             <div class="progress-row"><span data-alarm-label></span><div class="track secondary"><i data-alarm-progress></i></div></div>
           </section>
-          <section class="schedule" data-schedule><div class="days">
-            ${Array.from({ length: 7 }, (_, index) => `<div class="day off" data-day="${index}"><span></span><strong>—</strong></div>`).join("")}
-          </div></section>
+          <section class="schedule" data-schedule>
+            <div class="days">
+              ${Array.from({ length: 7 }, (_, index) => `<button type="button" class="day off" data-action="select-day" data-day="${index}"><span></span><strong>—</strong></button>`).join("")}
+            </div>
+            <div class="schedule-editor" data-schedule-editor>
+              <div class="schedule-editor-head">
+                <strong data-editor-day></strong>
+                <button type="button" class="day-toggle" data-action="toggle-day"><ha-icon icon="mdi:calendar-check"></ha-icon><span data-day-toggle-label></span></button>
+              </div>
+              <label class="time-slider-label" for="clock-advanced-time-slider"><span data-alarm-time-label></span><output data-slider-output></output></label>
+              <input id="clock-advanced-time-slider" data-schedule-slider type="range" min="0" max="1439" step="5">
+              <input data-schedule-time type="time" step="60" aria-label="Alarm time">
+            </div>
+          </section>
           <div class="primary-actions" data-primary-actions>
             <button class="primary snooze" data-action="press-snooze"><ha-icon icon="mdi:alarm-snooze"></ha-icon><span data-snooze-label></span></button>
             <button class="primary dismiss" data-action="press-dismiss"><ha-icon icon="mdi:alarm-off"></ha-icon><span data-dismiss-label></span></button>
@@ -326,6 +349,7 @@ class ClockAdvancedCard extends HTMLElement {
           <div class="toggles">
             <button data-action="toggle-skip" class="chip"><ha-icon icon="mdi:skip-next"></ha-icon><span data-skip-label></span></button>
             <button data-action="toggle-holiday" class="chip"><ha-icon icon="mdi:palm-tree"></ha-icon><span data-holiday-label></span></button>
+            <button data-action="toggle-vacation" class="chip vacation"><ha-icon icon="mdi:airplane"></ha-icon><span data-vacation-label></span></button>
             <button data-action="toggle-details" class="chip details-toggle"><ha-icon data-details-icon icon="mdi:chevron-up"></ha-icon><span data-details-label></span></button>
           </div>
           <section class="details" data-details>
@@ -340,6 +364,9 @@ class ClockAdvancedCard extends HTMLElement {
           </section>
         </div>
       </ha-card>${this._styles()}`;
+    this.shadowRoot.addEventListener("click", this._onClick);
+    this.shadowRoot.addEventListener("input", this._onInput);
+    this.shadowRoot.addEventListener("change", this._onChange);
     this._structureReady = true;
   }
 
@@ -356,6 +383,49 @@ class ClockAdvancedCard extends HTMLElement {
   _hidden(selector, value) {
     const node = this._node(selector);
     if (node && node.hidden !== Boolean(value)) node.hidden = Boolean(value);
+  }
+
+  _eventNode(event, selector) {
+    if (event.currentTarget?.matches?.(selector)) return event.currentTarget;
+    const pathMatch = event.composedPath?.().find((node) => node?.matches?.(selector));
+    return pathMatch || event.target.closest?.(selector);
+  }
+
+  _minutesFromTime(value) {
+    const [hours = 0, minutes = 0] = String(value || "00:00").split(":").map(Number);
+    return Math.max(0, Math.min(1439, (hours * 60) + minutes));
+  }
+
+  _timeFromMinutes(value) {
+    const minutes = Math.max(0, Math.min(1439, Number(value) || 0));
+    return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+  }
+
+  _selectedScheduleDay(schedule) {
+    const day = schedule[this._selectedDay] || {};
+    if (this._scheduleDraft?.index === this._selectedDay) {
+      return { ...day, ...this._scheduleDraft };
+    }
+    return day;
+  }
+
+  _patchScheduleEditor(schedule, t) {
+    const day = this._selectedScheduleDay(schedule);
+    const time = String(day.time || "06:00").slice(0, 5);
+    const enabled = day.enabled !== false;
+    this._text("[data-editor-day]", t.days[this._selectedDay] || day.day || "");
+    this._text("[data-alarm-time-label]", t.alarmTime);
+    this._text("[data-slider-output]", time);
+    this._text("[data-day-toggle-label]", enabled ? t.dayActive : t.dayInactive);
+    const slider = this._node("[data-schedule-slider]");
+    const timeInput = this._node("[data-schedule-time]");
+    const toggle = this._node('[data-action="toggle-day"]');
+    const minutes = String(this._minutesFromTime(time));
+    if (slider && slider.value !== minutes) slider.value = minutes;
+    if (timeInput && timeInput.value !== time) timeInput.value = time;
+    if (timeInput?.getAttribute("aria-label") !== t.alarmTime) timeInput?.setAttribute("aria-label", t.alarmTime);
+    toggle?.classList.toggle("selected", enabled);
+    toggle?.setAttribute("aria-pressed", String(enabled));
   }
 
   _render() {
@@ -388,10 +458,20 @@ class ClockAdvancedCard extends HTMLElement {
     const active = ["pre_alarm", "ringing", "snoozed"].includes(entity.state);
     const mode = this._mode();
     const schedule = Array.isArray(attrs.schedule) ? attrs.schedule : [];
+    if (this._scheduleDraft) {
+      const saved = schedule[this._scheduleDraft.index];
+      if (
+        saved
+        && String(saved.time || "").slice(0, 5) === this._scheduleDraft.time
+        && Boolean(saved.enabled) === Boolean(this._scheduleDraft.enabled)
+      ) this._scheduleDraft = null;
+    }
     const target = this._targetDate(attrs);
     const enabled = controls.enabled && this._hass.states[controls.enabled]?.state === "on";
     const skipped = controls.skip_next && this._hass.states[controls.skip_next]?.state === "on";
     const holiday = controls.holiday_mode && this._hass.states[controls.holiday_mode]?.state === "on";
+    const vacationEntity = guards.vacation || controls.vacation_mode;
+    const vacation = vacationEntity && this._hass.states[vacationEntity]?.state === "on";
     const statusText = t[entity.state] || entity.state;
     const progress = this._phaseProgress(entity.state);
     const workdayState = guards.workday ? this._hass.states[guards.workday]?.state : null;
@@ -428,14 +508,15 @@ class ClockAdvancedCard extends HTMLElement {
       const day = schedule[index] || {};
       const dayNode = this._node(`[data-day="${index}"]`);
       if (!dayNode) continue;
-      const dayClass = `day ${day.enabled ? "on" : "off"}`;
+      const dayClass = `day ${day.enabled ? "on" : "off"}${index === this._selectedDay ? " selected" : ""}`;
       if (dayNode.className !== dayClass) dayNode.className = dayClass;
       const dayParts = dayNode.querySelectorAll("span,strong");
       const dayLabelText = t.days[index] || day.day || "";
-      const dayTimeText = day.enabled ? String(day.time || "").slice(0, 2) : "—";
+      const dayTimeText = day.enabled ? String(day.time || "").slice(0, 5) : "—";
       if (dayParts[0] && dayParts[0].textContent !== dayLabelText) dayParts[0].textContent = dayLabelText;
       if (dayParts[1] && dayParts[1].textContent !== dayTimeText) dayParts[1].textContent = dayTimeText;
     }
+    this._patchScheduleEditor(schedule, t);
 
     this._hidden("[data-primary-actions]", !active);
     const snoozeButton = this._node('[data-action="press-snooze"]');
@@ -449,6 +530,7 @@ class ClockAdvancedCard extends HTMLElement {
 
     const skipButton = this._node('[data-action="toggle-skip"]');
     const holidayButton = this._node('[data-action="toggle-holiday"]');
+    const vacationButton = this._node('[data-action="toggle-vacation"]');
     const detailsButton = this._node('[data-action="toggle-details"]');
     skipButton?.classList.toggle("selected", Boolean(skipped));
     skipButton?.classList.toggle("warning", Boolean(skipped));
@@ -458,10 +540,14 @@ class ClockAdvancedCard extends HTMLElement {
     holidayButton?.classList.toggle("holiday", Boolean(holiday));
     const holidayDisabled = !controls.holiday_mode;
     if (holidayButton && holidayButton.disabled !== holidayDisabled) holidayButton.disabled = holidayDisabled;
+    vacationButton?.classList.toggle("selected", Boolean(vacation));
+    const vacationDisabled = !vacationEntity;
+    if (vacationButton && vacationButton.disabled !== vacationDisabled) vacationButton.disabled = vacationDisabled;
     this._hidden('[data-action="toggle-holiday"]', attrs.schedule_source === "schedule_entity");
     this._hidden('[data-action="toggle-details"]', mode !== "advanced");
     this._text("[data-skip-label]", t.skip);
     this._text("[data-holiday-label]", t.holiday);
+    this._text("[data-vacation-label]", t.vacationMode);
     this._text("[data-details-label]", this._detailsOpen ? t.less : t.more);
     const detailsIcon = this._node("[data-details-icon]");
     const detailsIconValue = `mdi:chevron-${this._detailsOpen ? "up" : "down"}`;
@@ -508,11 +594,24 @@ class ClockAdvancedCard extends HTMLElement {
   }
 
   async _onClick(event) {
-    const button = event.target.closest?.("[data-action]");
+    const button = this._eventNode(event, "[data-action]");
     if (!button || button.disabled || !this._hass) return;
     const attrs = this._hass.states[this._config.entity]?.attributes || {};
     const controls = attrs.controls || {};
+    const guards = attrs.guards || {};
     const action = button.dataset.action;
+    if (action === "select-day") {
+      this._selectedDay = Number(button.dataset.day) || 0;
+      this._scheduleDraft = null;
+      this._patch();
+      return;
+    }
+    if (action === "toggle-day") {
+      const schedule = Array.isArray(attrs.schedule) ? attrs.schedule : [];
+      const day = this._selectedScheduleDay(schedule);
+      await this._saveWeekday(String(day.time || "06:00").slice(0, 5), day.enabled === false);
+      return;
+    }
     if (action === "more-info") {
       const ev = new Event("hass-more-info", { bubbles: true, composed: true });
       ev.detail = { entityId: this._config.entity };
@@ -528,6 +627,7 @@ class ClockAdvancedCard extends HTMLElement {
       "toggle-enabled": controls.enabled,
       "toggle-skip": controls.skip_next,
       "toggle-holiday": controls.holiday_mode,
+      "toggle-vacation": guards.vacation || controls.vacation_mode,
     };
     if (map[action]) {
       await this._hass.callService("homeassistant", "toggle", { entity_id: map[action] });
@@ -538,6 +638,59 @@ class ClockAdvancedCard extends HTMLElement {
     } else if (action === "set-once" && controls.next_alarm) {
       const value = this.shadowRoot.querySelector("[data-once]")?.value;
       if (value) await this._hass.callService("datetime", "set_value", { entity_id: controls.next_alarm, datetime: value.length === 16 ? `${value}:00` : value });
+    }
+  }
+
+  _onInput(event) {
+    const slider = this._eventNode(event, "[data-schedule-slider]");
+    const timeInput = this._eventNode(event, "[data-schedule-time]");
+    if (!slider && !timeInput) return;
+    const schedule = this._hass?.states?.[this._config?.entity]?.attributes?.schedule || [];
+    const current = this._selectedScheduleDay(schedule);
+    const time = slider
+      ? this._timeFromMinutes(slider.value)
+      : String(timeInput.value || "00:00").slice(0, 5);
+    this._scheduleDraft = {
+      index: this._selectedDay,
+      time,
+      enabled: current.enabled !== false,
+    };
+    const linked = slider ? this._node("[data-schedule-time]") : this._node("[data-schedule-slider]");
+    const linkedValue = slider ? time : String(this._minutesFromTime(time));
+    if (linked && linked.value !== linkedValue) linked.value = linkedValue;
+    this._text("[data-slider-output]", time);
+    const dayTime = this._node(`[data-day="${this._selectedDay}"] strong`);
+    if (dayTime && dayTime.textContent !== time.slice(0, 5)) dayTime.textContent = time.slice(0, 5);
+  }
+
+  async _onChange(event) {
+    const slider = this._eventNode(event, "[data-schedule-slider]");
+    const timeInput = this._eventNode(event, "[data-schedule-time]");
+    if (!slider && !timeInput) return;
+    const time = slider
+      ? this._timeFromMinutes(slider.value)
+      : String(timeInput.value || "00:00").slice(0, 5);
+    const schedule = this._hass?.states?.[this._config?.entity]?.attributes?.schedule || [];
+    const current = this._selectedScheduleDay(schedule);
+    await this._saveWeekday(time, current.enabled !== false);
+  }
+
+  async _saveWeekday(time, enabled) {
+    const entity = this._hass?.states?.[this._config?.entity];
+    if (!entity || entity.attributes?.schedule_source === "schedule_entity") return;
+    this._scheduleDraft = { index: this._selectedDay, time, enabled };
+    this._patchScheduleEditor(entity.attributes?.schedule || [], TEXT[this._lang()]);
+    try {
+      await this._hass.callService("clock_advanced", "set_weekday_alarm", {
+        entity_id: this._config.entity,
+        day: WEEKDAYS[this._selectedDay],
+        time: `${time}:00`,
+        enabled,
+      });
+    } catch (error) {
+      this._scheduleDraft = null;
+      this._patch();
+      throw error;
     }
   }
 
@@ -573,11 +726,21 @@ class ClockAdvancedCard extends HTMLElement {
       .track.secondary i { background:var(--ca-accent); }
       .schedule { margin-top:12px; }
       .days { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:5px; }
-      .day { min-width:0; text-align:center; padding:7px 1px; border-radius:11px; background:color-mix(in srgb,var(--secondary-background-color) 84%,#64748b 16%); }
+      .day { min-width:0; border:1px solid transparent; color:inherit; text-align:center; padding:7px 1px; border-radius:11px; background:color-mix(in srgb,var(--secondary-background-color) 84%,#64748b 16%); }
       .day span,.day strong { display:block; font-size:.62rem; }
       .day span { color:var(--secondary-text-color); }
       .day strong { margin-top:4px; font-size:.72rem; font-variant-numeric:tabular-nums; }
       .day.off { opacity:.42; }
+      .day.selected { opacity:1; border-color:var(--ca-accent); box-shadow:0 0 0 1px color-mix(in srgb,var(--ca-accent) 35%,transparent); }
+      .schedule-editor { display:grid; gap:9px; margin-top:9px; padding:11px; border-radius:14px; background:color-mix(in srgb,var(--secondary-background-color) 88%,#64748b 12%); }
+      .schedule-editor-head,.time-slider-label { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+      .schedule-editor-head>strong { font-size:.75rem; }
+      .day-toggle { display:flex; align-items:center; gap:5px; min-height:31px; padding:5px 9px; border:1px solid var(--divider-color); border-radius:999px; background:transparent; font-size:.68rem; }
+      .day-toggle.selected { color:var(--ca-accent); border-color:color-mix(in srgb,var(--ca-accent) 62%,var(--divider-color)); }
+      .time-slider-label { color:var(--secondary-text-color); font-size:.68rem; }
+      .time-slider-label output { color:var(--primary-text-color); font-weight:750; font-variant-numeric:tabular-nums; }
+      [data-schedule-slider] { width:100%; margin:0; accent-color:var(--ca-accent); }
+      [data-schedule-time] { box-sizing:border-box; width:100%; min-height:36px; padding:6px 10px; border:1px solid var(--divider-color); border-radius:10px; background:var(--card-background-color); color:var(--primary-text-color); font:inherit; font-variant-numeric:tabular-nums; color-scheme:dark light; }
       .primary-actions { gap:8px; margin-top:12px; }
       .primary { flex:1; min-width:0; border:0; border-radius:13px; padding:10px 7px; display:flex; gap:6px; justify-content:center; align-items:center; font-size:.72rem; font-weight:750; }
       .snooze { background:color-mix(in srgb,#8b5cf6 20%,var(--card-background-color)); color:#c4b5fd; }
@@ -585,6 +748,7 @@ class ClockAdvancedCard extends HTMLElement {
       .toggles { flex-wrap:wrap; gap:8px; margin-top:13px; }
       .chip { display:flex; gap:5px; align-items:center; min-height:35px; padding:7px 11px; border-radius:999px; border:1px solid color-mix(in srgb,var(--divider-color) 72%,#94a3b8 28%); background:color-mix(in srgb,var(--card-background-color) 92%,#64748b 8%); font-size:.7rem; }
       .chip.selected { background:color-mix(in srgb,var(--ca-warm) 16%,transparent); border-color:color-mix(in srgb,var(--ca-warm) 50%,var(--divider-color)); }
+      .chip.vacation.selected { color:#5eead4; border-color:color-mix(in srgb,#5eead4 58%,var(--divider-color)); background:color-mix(in srgb,#5eead4 14%,transparent); }
       .details-toggle { flex-basis:auto; }
       .details { display:grid; gap:14px; margin-top:14px; padding-top:14px; border-top:1px solid var(--divider-color); }
       .detail-row { display:grid; gap:4px; }

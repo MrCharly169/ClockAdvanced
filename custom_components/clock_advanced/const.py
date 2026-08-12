@@ -9,6 +9,7 @@ LEGACY_CARD_RESOURCE = "/clock_advanced/clock-advanced.js"
 CARD_TYPE = "custom:clock-advanced-card"
 CARD_CONTRACT_VERSION = 1
 STORAGE_VERSION = 1
+SERVICE_SET_WEEKDAY_ALARM = "set_weekday_alarm"
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -42,6 +43,9 @@ CONF_SNOOZE_MINUTES = "snooze_minutes"
 CONF_MAX_SNOOZES = "max_snoozes"
 CONF_TIMEOUT_MINUTES = "timeout_minutes"
 CONF_TERMINAL_STATE_MINUTES = "terminal_state_minutes"
+CONF_NOTIFICATIONS_ENABLED = "notifications_enabled"
+CONF_NOTIFICATION_TARGETS = "notification_targets"
+CONF_NOTIFICATION_EVENTS = "notification_events"
 
 WEEKDAYS = (
     "monday",
@@ -98,6 +102,13 @@ DEFAULT_SNOOZE_MINUTES = 9
 DEFAULT_MAX_SNOOZES = 3
 DEFAULT_TIMEOUT_MINUTES = 30
 DEFAULT_TERMINAL_STATE_MINUTES = 20
+DEFAULT_NOTIFICATIONS_ENABLED = False
+DEFAULT_NOTIFICATION_EVENTS = (
+    "start",
+    "escalate",
+    "timeout",
+    "blocked",
+)
 
 EVENT_PHASE = f"{DOMAIN}_phase"
 SIGNAL_UPDATE = f"{DOMAIN}_update"
@@ -112,6 +123,19 @@ PHASE_TIMEOUT = "timeout"
 PHASE_CLEANUP = "cleanup"
 PHASE_SKIPPED = "skipped"
 PHASE_ERROR = "error"
+
+NOTIFICATION_EVENTS = (
+    PHASE_PREPARE,
+    PHASE_START,
+    PHASE_REPEAT,
+    PHASE_ESCALATE,
+    PHASE_SNOOZE,
+    PHASE_DISMISS,
+    PHASE_TIMEOUT,
+    PHASE_SKIPPED,
+    "blocked",
+    PHASE_ERROR,
+)
 
 STATUS_IDLE = "idle"
 STATUS_SCHEDULED = "scheduled"

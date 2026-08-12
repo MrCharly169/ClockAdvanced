@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 2026.8.1b2 - 2026-08-13
+
+- Added an inline Advanced Card weekday editor with selectable day tiles, a five-minute day slider, exact native time input, and per-day enable/disable control.
+- Added the native persisted Clock Advanced Vacation mode switch and a permanent Vacation button on the Card; an optional external vacation entity remains supported and takes precedence when configured.
+- Added `clock_advanced.set_weekday_alarm` to persist internal weekly times in config-entry options and recalculate immediately without reloading the integration or replacing Card DOM nodes.
+- Increased Advanced Sections grid sizing to reserve the editor's real height while keeping Compact, Easy, legacy YAML configuration, focus, and scroll behavior compatible.
+- Added a dedicated, explained notification step to setup and options: customers choose the recipients and lifecycle events while Clock Advanced generates localized titles and reasons automatically.
+- Added Home Assistant notification-inbox fallback when no Notify entity is selected, plus explicit notifications for start, repeat, escalation, snooze, dismissal, timeout, skip, blockers, and action errors.
+- Expanded field-level German and English guidance throughout the now eight-step setup wizard, keeping advanced action sequences optional and separate.
+
 ## 2026.8.1b1 - 2026-08-12
 
 - Reclassified Clock Advanced as a normal Home Assistant hub integration so it is managed under Devices & services instead of being presented as a Helper.

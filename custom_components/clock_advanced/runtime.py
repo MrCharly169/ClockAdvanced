@@ -38,6 +38,9 @@ from .const import (
     CONF_MAX_SNOOZES,
     CONF_NON_WORKDAY_ENABLED,
     CONF_NON_WORKDAY_TIME,
+    CONF_NOTIFICATION_EVENTS,
+    CONF_NOTIFICATION_TARGETS,
+    CONF_NOTIFICATIONS_ENABLED,
     CONF_PRE_ALARM_MINUTES,
     CONF_REPEAT_INTERVAL_MINUTES,
     CONF_SCHEDULE_ENTITY,
@@ -55,6 +58,8 @@ from .const import (
     DEFAULT_HOLIDAY_TIME,
     DEFAULT_MAX_SNOOZES,
     DEFAULT_NON_WORKDAY_TIME,
+    DEFAULT_NOTIFICATION_EVENTS,
+    DEFAULT_NOTIFICATIONS_ENABLED,
     DEFAULT_PRE_ALARM_MINUTES,
     DEFAULT_REPEAT_INTERVAL_MINUTES,
     DEFAULT_SCHEDULE_SOURCE,
@@ -75,6 +80,7 @@ from .const import (
     PHASE_SNOOZE,
     PHASE_START,
     PHASE_TIMEOUT,
+    NOTIFICATION_EVENTS,
     SCHEDULE_SOURCE_ENTITY,
     SIGNAL_UPDATE,
     STATUS_DISABLED,
@@ -107,6 +113,7 @@ class ClockState:
     enabled: bool = True
     skip_next: bool = False
     holiday_mode: bool = False
+    vacation_mode: bool = False
     status: str = STATUS_IDLE
     manual_alarm: str | None = None
     active_since: str | None = None
@@ -301,7 +308,9 @@ class ClockRuntime:
 
     def _guard_block_reason(self) -> str | None:
         config = self.config
-        if self._state_is_on(config.get(CONF_VACATION_ENTITY)):
+        if self.state.vacation_mode or self._state_is_on(
+            config.get(CONF_VACATION_ENTITY)
+        ):
             return "vacation"
         workday = config.get(CONF_WORKDAY_SENSOR)
         if (
@@ -403,6 +412,8 @@ class ClockRuntime:
         if self.state.status in ACTIVE_STATUSES:
             self._updated()
             return
+        previous_status = self.state.status
+        previous_reason = self.state.last_reason
         if clear_manual:
             self.state.manual_alarm = None
         now = dt_util.now()
@@ -494,6 +505,11 @@ class ClockRuntime:
                     self._cancel_alarm = async_track_point_in_utc_time(
                         self.hass, self._handle_alarm_due, self.next_alarm.astimezone(UTC)
                     )
+        if (
+            self.state.status in {STATUS_BLOCKED, STATUS_VACATION}
+            and (previous_status != self.state.status or previous_reason != block_reason)
+        ):
+            self._launch_notification("blocked", reason=block_reason)
         self._updated()
 
     async def async_set_enabled(self, enabled: bool) -> None:
@@ -513,6 +529,14 @@ class ClockRuntime:
     async def async_set_holiday_mode(self, enabled: bool) -> None:
         self.state.holiday_mode = enabled
         await self.async_refresh_schedule()
+
+    async def async_set_vacation_mode(self, enabled: bool) -> None:
+        """Enable or disable the integration-owned vacation blocker."""
+        self.state.vacation_mode = enabled
+        if enabled and self.state.status in ACTIVE_STATUSES:
+            await self.async_dismiss("vacation")
+        else:
+            await self.async_refresh_schedule()
 
     async def async_set_manual_alarm(self, value: datetime) -> None:
         if value.tzinfo is None:
@@ -808,6 +832,165 @@ class ClockRuntime:
     def _fire_phase(self, phase: str, **extra: Any) -> None:
         self.state.last_phase = phase
         self.hass.bus.async_fire(EVENT_PHASE, self._event_data(phase=phase, **extra))
+        if phase in NOTIFICATION_EVENTS:
+            self._launch_notification(phase, **extra)
+
+    def _launch_notification(self, event: str, **extra: Any) -> None:
+        """Schedule a configured user notification without delaying the alarm."""
+        self.hass.async_create_task(self._async_send_notification(event, **extra))
+
+    def _notification_content(
+        self, event: str, extra: dict[str, Any]
+    ) -> tuple[str, str]:
+        """Return a concise localized title and the reason for a notification."""
+        german = (self.hass.config.language or "en").lower().startswith("de")
+        event_labels = {
+            "prepare": ("Voralarm", "Pre-alarm"),
+            "start": ("Wecker gestartet", "Alarm started"),
+            "repeat": ("Wecker weiterhin aktiv", "Alarm still active"),
+            "escalate": ("Wecker eskaliert", "Alarm escalated"),
+            "snooze": ("Schlummern", "Snoozed"),
+            "dismiss": ("Wecker beendet", "Alarm dismissed"),
+            "timeout": ("Sicherheitsende", "Safety timeout"),
+            "skipped": ("Wecker ausgelassen", "Alarm skipped"),
+            "blocked": ("Wecker blockiert", "Alarm blocked"),
+            "error": ("Fehler", "Error"),
+        }
+        reason_labels = {
+            "manual": ("manuell beendet", "dismissed manually"),
+            "confirmation": (
+                "durch die Aufstehbestätigung beendet",
+                "dismissed by wake confirmation",
+            ),
+            "vacation": ("Urlaubsmodus ist aktiv", "vacation mode is active"),
+            "non_workday": ("heute ist kein Arbeitstag", "today is not a workday"),
+            "allow_condition": (
+                "die Freigabebedingung ist nicht erfüllt",
+                "the allow condition did not pass",
+            ),
+            "block_condition": (
+                "die Sperrbedingung ist erfüllt",
+                "the blocking condition matched",
+            ),
+            "start_conditions": (
+                "mindestens eine Startbedingung ist nicht erfüllt",
+                "at least one start condition did not pass",
+            ),
+            "skip_next": (
+                "der nächste Termin wurde ausgelassen",
+                "the next occurrence was skipped",
+            ),
+            "timeout": (
+                "das eingestellte Sicherheitsende wurde erreicht",
+                "the configured safety timeout was reached",
+            ),
+            "disabled": ("der Wecker wurde deaktiviert", "the alarm clock was disabled"),
+        }
+        label = event_labels.get(event, (event, event))[0 if german else 1]
+        reason = str(extra.get("reason") or self.state.last_reason or "")
+        reason_text = reason_labels.get(reason, (reason, reason))[0 if german else 1]
+        if event == PHASE_PREPARE:
+            minutes = int(self.setting(CONF_PRE_ALARM_MINUTES, DEFAULT_PRE_ALARM_MINUTES))
+            message = (
+                f"Die Vorbereitung beginnt {minutes} Minuten vor dem Wecker."
+                if german
+                else f"Preparation starts {minutes} minutes before the alarm."
+            )
+        elif event == PHASE_START:
+            from_snooze = extra.get("trigger_kind") == "snooze"
+            message = (
+                "Die Schlummerzeit ist vorbei; der Wecker startet erneut."
+                if german and from_snooze
+                else "Der geplante Wecktermin ist erreicht."
+                if german
+                else "The snooze period ended; the alarm starts again."
+                if from_snooze
+                else "The scheduled alarm time has been reached."
+            )
+        elif event == PHASE_REPEAT:
+            message = (
+                f"Der Wecker ist noch aktiv (Wiederholung {self.state.repeat_count})."
+                if german
+                else f"The alarm is still active (repeat {self.state.repeat_count})."
+            )
+        elif event == PHASE_ESCALATE:
+            message = (
+                "Die eingestellte Eskalationsgrenze wurde erreicht: "
+                f"{self.state.repeat_count} Wiederholungen, "
+                f"{self.state.snooze_count}× Schlummern."
+                if german
+                else "The configured escalation threshold was reached: "
+                f"{self.state.repeat_count} repeats, "
+                f"{self.state.snooze_count} snoozes."
+            )
+        elif event == PHASE_SNOOZE:
+            until = self._parse_datetime(self.state.snooze_until)
+            moment = dt_util.as_local(until).strftime("%H:%M") if until else "–"
+            message = (
+                f"Schlummern {self.state.snooze_count} von "
+                f"{self.setting(CONF_MAX_SNOOZES, DEFAULT_MAX_SNOOZES)} "
+                f"bis {moment}."
+                if german
+                else f"Snooze {self.state.snooze_count} of "
+                f"{self.setting(CONF_MAX_SNOOZES, DEFAULT_MAX_SNOOZES)} "
+                f"until {moment}."
+            )
+        elif event in {PHASE_DISMISS, PHASE_TIMEOUT, PHASE_SKIPPED, "blocked"}:
+            message = (
+                f"Grund: {reason_text or label}."
+                if german
+                else f"Reason: {reason_text or label}."
+            )
+        elif event == PHASE_ERROR:
+            failed = extra.get("failed_phase") or "unknown"
+            message = (
+                f"Die Aktion „{failed}“ ist fehlgeschlagen. Details stehen im "
+                "Home-Assistant-Protokoll."
+                if german
+                else f'The "{failed}" action failed. Details are available in the '
+                "Home Assistant log."
+            )
+        else:
+            message = label
+        return f"{self.entry.title}: {label}", message
+
+    async def _async_send_notification(self, event: str, **extra: Any) -> None:
+        """Send to selected notify entities or the HA notification inbox."""
+        if not bool(
+            self.setting(CONF_NOTIFICATIONS_ENABLED, DEFAULT_NOTIFICATIONS_ENABLED)
+        ):
+            return
+        selected = self.setting(CONF_NOTIFICATION_EVENTS, DEFAULT_NOTIFICATION_EVENTS)
+        if event not in selected:
+            return
+        title, message = self._notification_content(event, extra)
+        targets = self.config.get(CONF_NOTIFICATION_TARGETS) or []
+        if isinstance(targets, str):
+            targets = [targets]
+        try:
+            if targets:
+                await self.hass.services.async_call(
+                    "notify",
+                    "send_message",
+                    {"title": title, "message": message},
+                    target={"entity_id": list(targets)},
+                    blocking=False,
+                )
+            else:
+                await self.hass.services.async_call(
+                    "persistent_notification",
+                    "create",
+                    {
+                        "title": title,
+                        "message": message,
+                        "notification_id": (
+                            f"clock_advanced_{self.entry.entry_id}_{event}"
+                        ),
+                    },
+                    blocking=False,
+                )
+        except Exception:
+            _LOGGER.exception("Clock Advanced notification %s failed", event)
 
     async def _async_run_phase(self, phase: str, **extra: Any) -> None:
         script = self._scripts.get(phase)
@@ -818,10 +1001,7 @@ class ClockRuntime:
         except Exception as exc:  # Home Assistant logs the full script trace.
             _LOGGER.exception("Clock Advanced action phase %s failed", phase)
             self.state.last_error = f"{phase}: {type(exc).__name__}: {exc}"
-            self.hass.bus.async_fire(
-                EVENT_PHASE,
-                self._event_data(phase=PHASE_ERROR, failed_phase=phase),
-            )
+            self._fire_phase(PHASE_ERROR, failed_phase=phase)
             self._updated()
 
     def _event_data(self, **extra: Any) -> dict[str, Any]:

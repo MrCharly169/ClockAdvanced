@@ -82,12 +82,45 @@ try {
     throw new Error(`Expected the setup wizard, got ${setupFlow.type}:${setupFlow.step_id}`);
   }
 
+  const submitFlow = (flow, values) => request(
+    `${baseUrl}/api/config/config_entries/flow/${flow.flow_id}`,
+    { method: "POST", headers, body: JSON.stringify(values) },
+  );
+  const defaults = (flow) => Object.fromEntries(
+    flow.data_schema
+      .filter((field) => field.default !== undefined)
+      .map((field) => [field.name, field.default]),
+  );
+  let wizard = await submitFlow(setupFlow, { name: "Notification wizard test" });
+  if (wizard.step_id !== "source") throw new Error(`Expected source, got ${wizard.step_id}`);
+  wizard = await submitFlow(wizard, { schedule_source: "weekly" });
+  if (wizard.step_id !== "schedule") throw new Error(`Expected schedule, got ${wizard.step_id}`);
+  wizard = await submitFlow(wizard, defaults(wizard));
+  if (wizard.step_id !== "guards") throw new Error(`Expected guards, got ${wizard.step_id}`);
+  wizard = await submitFlow(wizard, defaults(wizard));
+  if (wizard.step_id !== "behavior") throw new Error(`Expected behavior, got ${wizard.step_id}`);
+  wizard = await submitFlow(wizard, defaults(wizard));
+  if (wizard.step_id !== "notifications") throw new Error(`Expected notifications, got ${wizard.step_id}`);
+  wizard = await submitFlow(wizard, {
+    notifications_enabled: true,
+    notification_targets: [],
+    notification_events: ["start", "blocked"],
+  });
+  if (wizard.step_id !== "actions") throw new Error(`Expected actions, got ${wizard.step_id}`);
+  wizard = await submitFlow(wizard, defaults(wizard));
+  if (wizard.step_id !== "review" || wizard.last_step !== true) {
+    throw new Error(`Expected final review, got ${wizard.step_id}`);
+  }
+  if (!wizard.description_placeholders?.notifications?.includes("2")) {
+    throw new Error("The final review does not summarize configured notifications");
+  }
+
   const flow = await request(`${baseUrl}/api/config/config_entries/options/flow`, {
     method: "POST",
     headers,
     body: JSON.stringify({ handler: entry.entry_id }),
   });
-  const expected = ["source", "schedule", "guards", "behavior", "actions"];
+  const expected = ["source", "schedule", "guards", "behavior", "notifications", "actions"];
   if (flow.type !== "menu" || flow.step_id !== "init") {
     throw new Error(`Expected the options menu, got ${flow.type}:${flow.step_id}`);
   }
@@ -107,6 +140,26 @@ try {
   for (const field of ["name", "schedule_source", "schedule_entity"]) {
     if (!sourceFields.includes(field)) {
       throw new Error(`The general options section is missing ${field}`);
+    }
+  }
+
+  const notificationFlow = await request(`${baseUrl}/api/config/config_entries/options/flow`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ handler: entry.entry_id }),
+  });
+  const notificationStep = await request(
+    `${baseUrl}/api/config/config_entries/options/flow/${notificationFlow.flow_id}`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ next_step_id: "notifications" }),
+    },
+  );
+  const notificationFields = notificationStep.data_schema.map((field) => field.name);
+  for (const field of ["notifications_enabled", "notification_targets", "notification_events"]) {
+    if (!notificationFields.includes(field)) {
+      throw new Error(`The notification options section is missing ${field}`);
     }
   }
   console.log("Clock Advanced setup wizard and integration options flow: PASS");

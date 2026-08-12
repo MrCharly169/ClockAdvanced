@@ -27,6 +27,9 @@ from .const import (
     CONF_NAME,
     CONF_NON_WORKDAY_ENABLED,
     CONF_NON_WORKDAY_TIME,
+    CONF_NOTIFICATION_EVENTS,
+    CONF_NOTIFICATION_TARGETS,
+    CONF_NOTIFICATIONS_ENABLED,
     CONF_PRE_ALARM_MINUTES,
     CONF_REPEAT_INTERVAL_MINUTES,
     CONF_SCHEDULE_ENTITY,
@@ -45,6 +48,8 @@ from .const import (
     DEFAULT_MAX_SNOOZES,
     DEFAULT_NAME,
     DEFAULT_NON_WORKDAY_TIME,
+    DEFAULT_NOTIFICATION_EVENTS,
+    DEFAULT_NOTIFICATIONS_ENABLED,
     DEFAULT_PRE_ALARM_MINUTES,
     DEFAULT_REPEAT_INTERVAL_MINUTES,
     DEFAULT_SCHEDULE_SOURCE,
@@ -54,6 +59,7 @@ from .const import (
     DEFAULT_WEEKDAY_TIME,
     DEFAULT_WEEKEND_TIME,
     DOMAIN,
+    NOTIFICATION_EVENTS,
     SCHEDULE_SOURCE_ENTITY,
     SCHEDULE_SOURCE_WEEKLY,
     WEEKDAYS,
@@ -188,6 +194,31 @@ def _actions_schema() -> vol.Schema:
     )
 
 
+def _notifications_schema() -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_NOTIFICATIONS_ENABLED,
+                default=DEFAULT_NOTIFICATIONS_ENABLED,
+            ): selector.BooleanSelector(),
+            vol.Optional(CONF_NOTIFICATION_TARGETS, default=[]): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="notify", multiple=True)
+            ),
+            vol.Required(
+                CONF_NOTIFICATION_EVENTS,
+                default=list(DEFAULT_NOTIFICATION_EVENTS),
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=list(NOTIFICATION_EVENTS),
+                    multiple=True,
+                    mode=selector.SelectSelectorMode.LIST,
+                    translation_key="notification_event",
+                )
+            ),
+        }
+    )
+
+
 class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Create a generic advanced clock through a guided wizard."""
 
@@ -242,7 +273,7 @@ class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> config_entries.ConfigFlowResult:
         if user_input is not None:
             self._data.update(user_input)
-            return await self.async_step_actions()
+            return await self.async_step_notifications()
         return self.async_show_form(step_id="behavior", data_schema=_behavior_schema())
 
     async def async_step_guards(
@@ -260,6 +291,16 @@ class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._data.update(user_input)
             return await self.async_step_review()
         return self.async_show_form(step_id="actions", data_schema=_actions_schema())
+
+    async def async_step_notifications(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        if user_input is not None:
+            self._data.update(user_input)
+            return await self.async_step_actions()
+        return self.async_show_form(
+            step_id="notifications", data_schema=_notifications_schema()
+        )
 
     async def async_step_review(
         self, user_input: dict[str, Any] | None = None
@@ -304,11 +345,19 @@ class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._data.get(CONF_START_CONDITIONS) or []
         )
         action_count = sum(bool(self._data.get(action_key(phase))) for phase in ACTION_PHASES)
+        notification_events = self._data.get(CONF_NOTIFICATION_EVENTS) or []
+        if not self._data.get(CONF_NOTIFICATIONS_ENABLED):
+            notification_summary = "off"
+        elif self._data.get(CONF_NOTIFICATION_TARGETS):
+            notification_summary = f"{len(notification_events)} / notify entities"
+        else:
+            notification_summary = f"{len(notification_events)} / Home Assistant"
         return {
             "name": str(self._data[CONF_NAME]),
             "source": str(source_detail),
             "guards": str(guard_count),
             "actions": str(action_count),
+            "notifications": notification_summary,
         }
 
     @staticmethod
@@ -327,7 +376,14 @@ class ClockAdvancedOptionsFlow(config_entries.OptionsFlowWithReload):
     ) -> config_entries.ConfigFlowResult:
         return self.async_show_menu(
             step_id="init",
-            menu_options=["source", "schedule", "guards", "behavior", "actions"],
+            menu_options=[
+                "source",
+                "schedule",
+                "guards",
+                "behavior",
+                "notifications",
+                "actions",
+            ],
         )
 
     @property
@@ -405,4 +461,17 @@ class ClockAdvancedOptionsFlow(config_entries.OptionsFlowWithReload):
             return self._save(user_input, keys)
         return self.async_show_form(
             step_id="actions", data_schema=self._with_suggestions(_actions_schema())
+        )
+
+    async def async_step_notifications(self, user_input=None):
+        keys = (
+            CONF_NOTIFICATIONS_ENABLED,
+            CONF_NOTIFICATION_TARGETS,
+            CONF_NOTIFICATION_EVENTS,
+        )
+        if user_input is not None:
+            return self._save(user_input, keys)
+        return self.async_show_form(
+            step_id="notifications",
+            data_schema=self._with_suggestions(_notifications_schema()),
         )

@@ -1,7 +1,7 @@
 {
   "domain": "clock_advanced",
   "name": "Clock Advanced",
-  "version": "2026.8.1b1",
+  "version": "2026.8.1b2",
   "config_flow": true,
   "integration_type": "hub",
   "iot_class": "calculated",
@@ -9,6 +9,7 @@
   "issue_tracker": "https://github.com/MrCharly169/ClockAdvanced/issues",
   "dependencies": [
     "http",
+    "notify",
     "persistent_notification"
   ],
   "after_dependencies": [

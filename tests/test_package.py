@@ -128,6 +128,45 @@ class PackageTests(unittest.TestCase):
         self.assertIn("async_show_menu", config_flow)
         self.assertIn("CONF_NAME, CONF_SCHEDULE_SOURCE", config_flow)
         self.assertIn("async_update_entry", config_flow)
+        self.assertIn("async_step_notifications", config_flow)
+        self.assertIn("CONF_NOTIFICATION_TARGETS", config_flow)
+
+    def test_customer_notification_controls_and_reasons_are_shipped(self) -> None:
+        config_flow = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
+        runtime = (COMPONENT / "runtime.py").read_text(encoding="utf-8")
+        diagnostics = (COMPONENT / "diagnostics.py").read_text(encoding="utf-8")
+        for token in (
+            "CONF_NOTIFICATIONS_ENABLED",
+            "CONF_NOTIFICATION_TARGETS",
+            "CONF_NOTIFICATION_EVENTS",
+            "notification_event",
+        ):
+            self.assertIn(token, config_flow)
+        self.assertIn('"persistent_notification"', runtime)
+        self.assertIn('"send_message"', runtime)
+        self.assertIn("_notification_content", runtime)
+        self.assertIn('self._launch_notification("blocked"', runtime)
+        self.assertIn("CONF_NOTIFICATION_TARGETS", diagnostics)
+
+    def test_card_weekday_editor_and_native_vacation_are_shipped(self) -> None:
+        init = (COMPONENT / "__init__.py").read_text(encoding="utf-8")
+        runtime = (COMPONENT / "runtime.py").read_text(encoding="utf-8")
+        switch = (COMPONENT / "switch.py").read_text(encoding="utf-8")
+        sensor = (COMPONENT / "sensor.py").read_text(encoding="utf-8")
+        frontend = (COMPONENT / "frontend" / "clock-advanced-card.js").read_text(
+            encoding="utf-8"
+        )
+        services = (COMPONENT / "services.yaml").read_text(encoding="utf-8")
+        self.assertIn("SERVICE_SET_WEEKDAY_ALARM", init)
+        self.assertIn("async_update_entry", init)
+        self.assertIn("await runtime.async_refresh_schedule()", init)
+        self.assertIn("set_weekday_alarm:", services)
+        self.assertIn("async_set_vacation_mode", runtime)
+        self.assertIn('"vacation_mode"', switch)
+        self.assertIn('"vacation_mode": self._entity', sensor)
+        self.assertIn('data-schedule-slider type="range"', frontend)
+        self.assertIn('data-schedule-time type="time"', frontend)
+        self.assertIn('data-action="toggle-vacation"', frontend)
 
 
 if __name__ == "__main__":

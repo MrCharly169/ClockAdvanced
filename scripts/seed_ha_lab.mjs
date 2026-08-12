@@ -81,6 +81,11 @@ async function callWS(payload) {
 
 const resourceUrl = "/clock_advanced/clock-advanced-card.js";
 const resources = await callWS({ type: "lovelace/resources/list" });
+for (const resource of resources.filter(
+  (item) => item.url.split("?", 1)[0] === resourceUrl && item.url !== resourceUrl,
+)) {
+  await callWS({ type: "lovelace/resources/delete", resource_id: resource.id });
+}
 if (!resources.some((resource) => resource.url === resourceUrl)) {
   await callWS({ type: "lovelace/resources/create", res_type: "module", url: resourceUrl });
 }

@@ -4,9 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import voluptuous as vol
+
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_call_later
 
@@ -24,6 +29,8 @@ from .const import (
     DEFAULT_SCHEDULE_SOURCE,
     DOMAIN,
     PLATFORMS,
+    SERVICE_SET_WEEKDAY_ALARM,
+    SCHEDULE_SOURCE_WEEKLY,
     WEEKDAYS,
     day_enabled_key,
     day_time_key,
@@ -42,6 +49,56 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             [StaticPathConfig(f"/{DOMAIN}", str(frontend), False)]
         )
         hass.data[key] = True
+    service_key = f"{DOMAIN}_services_registered"
+    if not hass.data.get(service_key):
+        async def async_set_weekday_alarm(call: ServiceCall) -> None:
+            """Persist one internal weekday and refresh without reloading the entry."""
+            entity_id = call.data[ATTR_ENTITY_ID]
+            registry_entry = er.async_get(hass).async_get(entity_id)
+            if (
+                registry_entry is None
+                or registry_entry.platform != DOMAIN
+                or not registry_entry.config_entry_id
+            ):
+                raise HomeAssistantError(
+                    f"{entity_id} is not a Clock Advanced entity"
+                )
+            entry = hass.config_entries.async_get_entry(
+                registry_entry.config_entry_id
+            )
+            if entry is None or entry.domain != DOMAIN or entry.runtime_data is None:
+                raise HomeAssistantError("Clock Advanced entry is not loaded")
+            runtime = entry.runtime_data
+            if (
+                runtime.config.get(CONF_SCHEDULE_SOURCE, DEFAULT_SCHEDULE_SOURCE)
+                != SCHEDULE_SOURCE_WEEKLY
+            ):
+                raise HomeAssistantError(
+                    "Weekday alarms can only be edited for the internal weekly schedule"
+                )
+            day = call.data["day"]
+            alarm_time = call.data["time"]
+            options = dict(entry.options)
+            options[day_time_key(day)] = alarm_time.isoformat()
+            if "enabled" in call.data:
+                options[day_enabled_key(day)] = call.data["enabled"]
+            hass.config_entries.async_update_entry(entry, options=options)
+            await runtime.async_refresh_schedule()
+
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_WEEKDAY_ALARM,
+            async_set_weekday_alarm,
+            schema=vol.Schema(
+                {
+                    vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+                    vol.Required("day"): vol.In(WEEKDAYS),
+                    vol.Required("time"): cv.time,
+                    vol.Optional("enabled"): cv.boolean,
+                }
+            ),
+        )
+        hass.data[service_key] = True
     return True
 
 

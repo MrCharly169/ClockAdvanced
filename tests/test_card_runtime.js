@@ -51,6 +51,8 @@ class FakeElement {
   closest(selector) {
     if (selector === "ha-badge" && this.selector === "ha-badge") return this;
     if (selector === "[data-action]" && this.dataset.action) return this;
+    if (selector === "[data-schedule-slider]" && this.selector === "[data-schedule-slider]") return this;
+    if (selector === "[data-schedule-time]" && this.selector === "[data-schedule-time]") return this;
     return null;
   }
   focus() { global.document.activeElement = this; global.document.focusCalls += 1; }
@@ -109,7 +111,8 @@ global.document = {
   if (!registry.get("clock-advanced-card-editor")) throw new Error("Editor was not registered");
   const Badge = registry.get("clock-advanced-badge");
   if (!Badge || !registry.get("clock-advanced-badge-editor")) throw new Error("Badge was not registered");
-  const hass = { states: { "sensor.clock_status": { state: "scheduled", last_updated: "2031-06-20T05:00:00+00:00", attributes: { card_contract: 1, card_type: "custom:clock-advanced-card", controls: {}, schedule: [], name: "Bedroom clock", next_alarm: "2031-06-21T06:00:00+00:00" } } }, language: "en", callService: async () => {} };
+  const serviceCalls = [];
+  const hass = { states: { "sensor.clock_status": { state: "scheduled", last_updated: "2031-06-20T05:00:00+00:00", attributes: { card_contract: 1, card_type: "custom:clock-advanced-card", controls: {}, schedule: [], name: "Bedroom clock", next_alarm: "2031-06-21T06:00:00+00:00" } } }, language: "en", callService: async (...args) => { serviceCalls.push(args); } };
   const stub = Card.getStubConfig(hass);
   if (stub.entity !== "sensor.clock_status") throw new Error("Stub did not discover the status entity");
   if (stub.mode !== "easy") throw new Error("Easy is not the default Card mode");
@@ -119,7 +122,8 @@ global.document = {
   if (instance.getCardSize() !== 7 || instance.getGridOptions().columns !== 12 || instance.getGridOptions().rows !== 7) throw new Error("Sizing API is invalid");
   instance.setConfig({ ...stub, mode: "advanced" });
   instance.hass = hass;
-  if (instance.getCardSize() !== 14 || instance.getGridOptions().rows !== 14 || instance.getGridOptions().min_rows !== 12) throw new Error("Advanced sizing does not reserve its rendered height");
+  if (instance.getCardSize() !== 18 || instance.getGridOptions().rows !== 18 || instance.getGridOptions().min_rows !== 16) throw new Error("Advanced sizing does not reserve its rendered height");
+  if (!["click", "input", "change"].every((type) => instance.shadowRoot.listeners.has(type))) throw new Error("Stable Shadow Root event delegation is incomplete");
   const cardRenderCount = instance.shadowRoot.writeCount;
   const cardRoot = instance.shadowRoot.querySelector("ha-card");
   const focusedControl = instance.shadowRoot.querySelector('[data-action="toggle-details"]');
@@ -179,7 +183,8 @@ global.document = {
     ...hass.states["sensor.clock_status"].attributes,
     controls: {
       enabled: "switch.clock_enabled", skip_next: "switch.clock_skip",
-      holiday_mode: "switch.clock_holiday", snooze: "button.clock_snooze", dismiss: "button.clock_dismiss",
+      holiday_mode: "switch.clock_holiday", vacation_mode: "switch.clock_vacation",
+      snooze: "button.clock_snooze", dismiss: "button.clock_dismiss",
     },
     guards: {
       workday: "binary_sensor.workday", confirmation: "binary_sensor.motion", native_conditions: 2,
@@ -193,6 +198,7 @@ global.document = {
       "switch.clock_enabled": { state: index % 2 ? "on" : "off", attributes: {} },
       "switch.clock_skip": { state: index % 3 ? "off" : "on", attributes: {} },
       "switch.clock_holiday": { state: "off", attributes: {} },
+      "switch.clock_vacation": { state: index % 2 ? "off" : "on", attributes: {} },
       "binary_sensor.workday": { state: index % 2 ? "on" : "off", attributes: { friendly_name: "Workday" } },
       "binary_sensor.motion": { state: "off", attributes: { friendly_name: "Motion" } },
     } };
@@ -200,6 +206,34 @@ global.document = {
   if (instance.shadowRoot.querySelector("ha-card") !== cardRoot || instance.shadowRoot.writeCount !== cardRenderCount) throw new Error("Rapid control and guard updates rebuilt the Card");
   if (document.activeElement !== focusedControl || document.focusCalls !== focusCallsAfterUserAction) throw new Error("Card moved focus without user interaction");
   if (scrollContainer.scrollTop !== 240 || document.scrollCalls !== 0) throw new Error("Card invoked scrolling during updates");
+
+  const weeklySchedule = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    .map((day) => ({ day, enabled: true, time: "06:00:00" }));
+  instance.hass = { ...hass, states: {
+    ...hass.states,
+    "sensor.clock_status": { state: "scheduled", attributes: { ...rapidAttrs, schedule: weeklySchedule, schedule_source: "weekly" } },
+    "switch.clock_vacation": { state: "off", attributes: {} },
+  } };
+  const tuesdayButton = instance.shadowRoot.querySelector('[data-day="1"]');
+  tuesdayButton.dataset.action = "select-day";
+  tuesdayButton.dataset.day = "1";
+  await instance.shadowRoot.listeners.get("click")({
+    currentTarget: instance.shadowRoot,
+    target: tuesdayButton,
+    composedPath: () => [tuesdayButton, instance.shadowRoot],
+  });
+  if (instance._selectedDay !== 1) throw new Error("Delegated weekday selection did not update the editor");
+  instance._selectedDay = 0;
+  await instance._saveWeekday("07:35", false);
+  const scheduleCall = serviceCalls.at(-1);
+  if (scheduleCall?.[0] !== "clock_advanced" || scheduleCall?.[1] !== "set_weekday_alarm"
+    || scheduleCall?.[2]?.day !== "monday" || scheduleCall?.[2]?.time !== "07:35:00"
+    || scheduleCall?.[2]?.enabled !== false) throw new Error("Advanced Card did not save its weekday editor through the integration service");
+  await instance._onClick({ target: instance.shadowRoot.querySelector('[data-action="toggle-vacation"]') });
+  const vacationCall = serviceCalls.at(-1);
+  if (vacationCall?.[0] !== "homeassistant" || vacationCall?.[1] !== "toggle"
+    || vacationCall?.[2]?.entity_id !== "switch.clock_vacation") throw new Error("Vacation button did not toggle the native Vacation mode");
+  if (instance.shadowRoot.querySelector("ha-card") !== cardRoot || instance.shadowRoot.writeCount !== cardRenderCount) throw new Error("Schedule editing rebuilt the Card DOM");
   if (!Card.getConfigElement()) throw new Error("Editor API failed");
   const registration = window.customCards.find((item) => item.type === "clock-advanced-card");
   if (!registration) throw new Error("Card picker registration missing");
