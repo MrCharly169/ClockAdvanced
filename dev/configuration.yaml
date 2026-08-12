@@ -28,6 +28,14 @@ input_boolean:
     name: Quiet mode
     initial: false
 
+input_number:
+  home_count:
+    name: People at home (numeric condition lab)
+    min: 0
+    max: 5
+    step: 1
+    initial: 2
+
 template:
   - binary_sensor:
       - name: Lab workday

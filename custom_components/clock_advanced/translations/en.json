@@ -39,6 +39,7 @@
           "pre_alarm_minutes": "Pre-alarm lead time (minutes)",
           "repeat_interval_minutes": "Repeat interval (minutes)",
           "escalate_after_repeats": "Escalate after repeats (0 disables)",
+          "escalate_after_snoozes": "Escalate after snoozes (0 disables)",
           "snooze_minutes": "Snooze duration (minutes)",
           "max_snoozes": "Maximum snoozes (0 disables)",
           "timeout_minutes": "Safety timeout (minutes)",
@@ -47,36 +48,38 @@
       },
       "guards": {
         "title": "Conditions and blockers",
-        "description": "Step 4 of 7 · Add only the conditions you need. For advanced logic, expose a template binary sensor and select it as the allow or block entity.",
+        "description": "Step 4 of 7 · Alarm start conditions use Home Assistant's normal condition editor. Every condition added there must pass. Example: Numeric state → zone.home → above 1.",
         "data": {
           "workday_sensor": "Workday sensor",
           "vacation_entity": "Vacation-mode entity",
           "confirmation_sensor": "Wake-up confirmation sensor",
           "block_non_workdays": "Block completely on non-workdays",
-          "allow_entity": "Only allow when entity…",
-          "allow_state": "…has this state",
-          "block_entity": "Block when entity…",
-          "block_state": "…has this state"
+          "start_conditions": "Alarm start conditions"
         },
         "data_description": {
           "workday_sensor": "When off, today's enabled weekday uses the non-workday time.",
           "vacation_entity": "When on, no alarm is armed and an active alarm is dismissed.",
-          "confirmation_sensor": "When on during an active alarm, it dismisses the alarm as confirmed.",
+          "confirmation_sensor": "For example, select the bedroom motion sensor. When it turns on while ringing or snoozed, the alarm is dismissed.",
           "block_non_workdays": "Overrides the non-workday time and blocks the alarm whenever the workday sensor is off.",
-          "allow_entity": "Examples: person, presence, guest-mode, or a template binary sensor.",
-          "allow_state": "Typical states are on or home. The comparison is exact.",
-          "block_entity": "Examples: quiet mode, child sleeping, meeting mode, or a template binary sensor.",
-          "block_state": "Typical state is on. The comparison is exact."
+          "start_conditions": "These native HA conditions are checked before pre-alarm and start. Numeric state, state, time, zone, device, template, and AND/OR/NOT are supported."
         }
       },
       "actions": {
         "title": "Action phases",
-        "description": "Step 6 of 7 · Build normal Home Assistant action sequences. All fields are optional and receive the variable clock_advanced.",
+        "description": "Step 6 of 7 · Build normal Home Assistant action sequences. Start runs for the initial alarm and again after each completed snooze. Snooze runs immediately when pressed; Escalate runs once after the configured threshold.",
         "data": {
           "actions_prepare": "Prepare / pre-alarm", "actions_start": "Start",
           "actions_repeat": "Repeat", "actions_escalate": "Escalate",
           "actions_snooze": "Snooze", "actions_dismiss": "Dismiss / confirmed",
           "actions_timeout": "Timeout", "actions_cleanup": "Cleanup"
+        },
+        "data_description": {
+          "actions_start": "Start music on the first media player here. This sequence also runs again when the snooze period ends.",
+          "actions_repeat": "Optionally retrigger the current output while the alarm is ringing.",
+          "actions_escalate": "For example, start a second media player here. Runs once after N repeats or N snoozes.",
+          "actions_snooze": "Runs immediately when Snooze is pressed; pause or stop the music here.",
+          "actions_dismiss": "Runs after manual dismissal or confirmation by the motion sensor.",
+          "actions_cleanup": "Final shared cleanup after dismissal or timeout."
         }
       },
       "review": {
@@ -125,23 +128,22 @@
         "description": "Repeat cadence and snooze are separate. Timeout covers the complete alarm session.",
         "data": {
           "pre_alarm_minutes": "Pre-alarm lead time (minutes)", "repeat_interval_minutes": "Repeat interval (minutes)",
-          "escalate_after_repeats": "Escalate after repeats (0 disables)", "snooze_minutes": "Snooze duration (minutes)",
+          "escalate_after_repeats": "Escalate after repeats (0 disables)", "escalate_after_snoozes": "Escalate after snoozes (0 disables)", "snooze_minutes": "Snooze duration (minutes)",
           "max_snoozes": "Maximum snoozes (0 disables)", "timeout_minutes": "Safety timeout (minutes)",
           "terminal_state_minutes": "Keep final state visible (minutes)"
         }
       },
       "guards": {
         "title": "Conditions and blockers",
-        "description": "Clear a field to remove an existing link.",
+        "description": "Every alarm start condition must pass. Example for at least two people home: Numeric state → zone.home → above 1.",
         "data": {
           "workday_sensor": "Workday sensor", "vacation_entity": "Vacation-mode entity", "confirmation_sensor": "Wake-up confirmation sensor",
-          "block_non_workdays": "Block completely on non-workdays", "allow_entity": "Only allow when entity…", "allow_state": "…has this state",
-          "block_entity": "Block when entity…", "block_state": "…has this state"
+          "block_non_workdays": "Block completely on non-workdays", "start_conditions": "Alarm start conditions"
         }
       },
       "actions": {
         "title": "Action phases",
-        "description": "Every phase is optional and uses normal Home Assistant actions.",
+        "description": "Start also runs after every snooze; Snooze runs immediately when pressed; Escalate runs once after the configured repeat or snooze threshold.",
         "data": {
           "actions_prepare": "Prepare / pre-alarm", "actions_start": "Start", "actions_repeat": "Repeat", "actions_escalate": "Escalate",
           "actions_snooze": "Snooze", "actions_dismiss": "Dismiss / confirmed", "actions_timeout": "Timeout", "actions_cleanup": "Cleanup"

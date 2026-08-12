@@ -1,0 +1,47 @@
+# Clock Advanced example for the native UI editors.
+# Do not paste this whole file into configuration.yaml. Add the individual
+# conditions/actions in Settings -> Devices & services -> Clock Advanced -> Configure.
+
+alarm_start_conditions:
+  # Native "Numeric state" condition in the UI:
+  - condition: numeric_state
+    entity_id: zone.home
+    above: 1
+
+behavior:
+  snooze_minutes: 10
+  max_snoozes: 3
+  escalate_after_snoozes: 3
+
+actions_start:
+  # Runs for the initial alarm and again after every completed snooze.
+  - action: media_player.play_media
+    target:
+      entity_id: media_player.bedroom
+    data:
+      media_content_id: media-source://media_source/local/alarm.mp3
+      media_content_type: music
+
+actions_snooze:
+  # Runs immediately when the Snooze button is pressed.
+  - action: media_player.media_pause
+    target:
+      entity_id: media_player.bedroom
+
+actions_escalate:
+  # Runs once when the third snooze period ends.
+  - action: media_player.play_media
+    target:
+      entity_id: media_player.living_room
+    data:
+      media_content_id: media-source://media_source/local/alarm.mp3
+      media_content_type: music
+
+actions_cleanup:
+  - action: media_player.media_stop
+    target:
+      entity_id:
+        - media_player.bedroom
+        - media_player.living_room
+
+wake_confirmation_sensor: binary_sensor.bedroom_motion

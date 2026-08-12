@@ -39,8 +39,8 @@ Conditions are checked before preparation and alarm start, and an active alarm i
 - optional workday sensor and optional blocking on non-workdays
 - vacation/absence entity
 - wake-confirmation sensor for automatic completion
-- generic **allow** entity plus exact required state, for example `person.alex = home`
-- generic **block** entity plus exact blocking state, for example `input_boolean.quiet_mode = on`
+- native Home Assistant start conditions, including numeric state, state, time, zone, device, template and nested AND/OR/NOT logic
+- numeric occupancy example: select **Numeric state**, entity `zone.home`, and **Above** `1`; because the comparison is strict, the alarm starts only when at least two persons are home
 - manual skip-next, holiday mode, enabled switch, maximum snoozes, escalation threshold, and safety timeout
 
 Die Bedingungen werden vor Vorbereitung und Weckstart geprüft. Wird während eines laufenden Weckers eine Sperre aktiv, beendet Clock Advanced die Session sicher. Damit lassen sich unter anderem Anwesenheit, Ruhemodus, Arbeitstag, Ferien, Feiertage oder beliebige andere HA-Zustände ohne fest eingebaute Entitätsnamen kombinieren.
@@ -54,15 +54,26 @@ Jede optionale Phase verwendet den normalen Home-Assistant-Aktionseditor und erh
 | Phase | Purpose / Zweck |
 | --- | --- |
 | `prepare` | light sunrise, pre-heating, gentle preparation / Licht-Sonnenaufgang, Vorbereitung |
-| `start` | initial alarm output / erster Weckimpuls |
+| `start` | initial output and output after every completed snooze / erster Weckimpuls und erneut nach jedem abgelaufenen Schlummern |
 | `repeat` | cadence while ringing / Wiederholung während des Klingelns |
-| `escalate` | one-time stronger output after N repeats / einmalige Eskalation nach N Wiederholungen |
+| `escalate` | one-time stronger output after N repeats or N snoozes / einmalige Eskalation nach N Wiederholungen oder N Schlummern |
 | `snooze` | pause or lower outputs / Ausgaben pausieren oder reduzieren |
 | `dismiss` | confirmed or manual finish / bestätigtes oder manuelles Ende |
 | `timeout` | emergency or inactivity notification / Notfall- oder Inaktivitätsmeldung |
 | `cleanup` | always turn off media and lights / Medien und Licht zuverlässig ausschalten |
 
 The integration also fires `clock_advanced_phase` for every phase, including `skipped` and `error`. Event data includes `contract_version`, `config_entry_id`, `name`, `status`, `phase`, `next_alarm`, repeat/snooze counts and escalation state.
+
+### Example: music, snooze, escalation, motion / Beispiel: Musik, Snooze, Eskalation, Bewegung
+
+In **Alarm lifecycle / Weckablauf**, set Snooze duration to `10`, maximum snoozes to at least `3`, Escalate after snoozes to `3`, and Escalate after repeats to `0` if only snoozes should trigger escalation. In **Action phases / Aktionsphasen**:
+
+- **Start:** call `media_player.play_media` for the first speaker. Clock Advanced runs this sequence initially and after every ten-minute snooze.
+- **Snooze:** call `media_player.media_pause` or `media_player.media_stop` for the first speaker.
+- **Escalate:** call `media_player.play_media` for the second speaker. It runs once when the third snooze period ends.
+- **Cleanup:** stop both speakers.
+
+Select the room's motion `binary_sensor` as **Wake-up confirmation / Aufsteh-Bestätigung**. A detected motion (`on`) while ringing or snoozed dismisses the alarm and runs Dismiss followed by Cleanup.
 
 ## Installation / Installation
 

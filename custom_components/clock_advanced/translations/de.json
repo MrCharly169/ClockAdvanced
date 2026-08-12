@@ -39,6 +39,7 @@
           "pre_alarm_minutes": "Vorlauf Voralarm (Minuten)",
           "repeat_interval_minutes": "Wiederholungsintervall (Minuten)",
           "escalate_after_repeats": "Eskalation nach Wiederholungen (0 deaktiviert)",
+          "escalate_after_snoozes": "Eskalation nach Schlummern (0 deaktiviert)",
           "snooze_minutes": "Schlummerdauer (Minuten)",
           "max_snoozes": "Maximales Schlummern (0 deaktiviert)",
           "timeout_minutes": "Sicherheitsabschaltung (Minuten)",
@@ -47,35 +48,37 @@
       },
       "guards": {
         "title": "Bedingungen und Sperren",
-        "description": "Schritt 4 von 7 · Ergänze nur benötigte Bedingungen. Komplexe Logik kannst du als Template-Binärsensor abbilden und hier als Freigabe oder Sperre auswählen.",
+        "description": "Schritt 4 von 7 · Unter Alarm-Startbedingungen verwendest du den normalen Home-Assistant-Bedingungseditor. Alle dort angelegten Bedingungen müssen erfüllt sein. Beispiel: Numerischer Zustand → zone.home → über 1.",
         "data": {
           "workday_sensor": "Arbeitstag-Sensor", "vacation_entity": "Urlaubsmodus-Entität",
           "confirmation_sensor": "Aufsteh-Bestätigung",
           "block_non_workdays": "An Nicht-Arbeitstagen vollständig sperren",
-          "allow_entity": "Nur freigeben, wenn Entität…",
-          "allow_state": "…diesen Zustand hat",
-          "block_entity": "Sperren, wenn Entität…",
-          "block_state": "…diesen Zustand hat"
+          "start_conditions": "Alarm-Startbedingungen"
         },
         "data_description": {
           "workday_sensor": "Bei Aus verwendet ein heute aktivierter Wochentag die Feiertagszeit.",
           "vacation_entity": "Bei Ein wird kein Wecker geplant und ein aktiver Wecker beendet.",
-          "confirmation_sensor": "Bei Ein während eines aktiven Weckers wird dieser als bestätigt beendet.",
+          "confirmation_sensor": "Wähle zum Beispiel den Bewegungsmelder im Schlafzimmer. Sobald er während Klingeln oder Schlummern Ein meldet, wird der Wecker beendet.",
           "block_non_workdays": "Überschreibt die Feiertagszeit und sperrt den Wecker, sobald der Arbeitstag-Sensor Aus ist.",
-          "allow_entity": "Beispiele: Person, Anwesenheit, Gästemodus oder Template-Binärsensor.",
-          "allow_state": "Typische Zustände sind on oder home. Der Vergleich erfolgt exakt.",
-          "block_entity": "Beispiele: Ruhemodus, Kind schläft, Meetingmodus oder Template-Binärsensor.",
-          "block_state": "Typischer Zustand ist on. Der Vergleich erfolgt exakt."
+          "start_conditions": "Diese nativen HA-Bedingungen werden vor Voralarm und Start geprüft. Numerische Zustände, Zustand, Zeit, Zone, Gerät, Template sowie UND/ODER/NICHT sind möglich."
         }
       },
       "actions": {
         "title": "Aktionsphasen",
-        "description": "Schritt 6 von 7 · Erstelle normale Home-Assistant-Aktionsfolgen. Alle Felder sind optional und erhalten die Variable clock_advanced.",
+        "description": "Schritt 6 von 7 · Baue normale Home-Assistant-Aktionsfolgen. Start läuft beim ersten Klingeln und nach jedem abgelaufenen Schlummern erneut. Schlummern läuft sofort beim Tastendruck; Eskalieren einmalig nach dem eingestellten Grenzwert.",
         "data": {
           "actions_prepare": "Vorbereiten / Voralarm", "actions_start": "Start",
           "actions_repeat": "Wiederholen", "actions_escalate": "Eskalieren",
           "actions_snooze": "Schlummern", "actions_dismiss": "Beenden / bestätigt",
           "actions_timeout": "Zeitüberschreitung", "actions_cleanup": "Aufräumen"
+        },
+        "data_description": {
+          "actions_start": "Hier Musik auf dem ersten Media Player starten. Diese Folge läuft auch nach Ende der Schlummerdauer erneut.",
+          "actions_repeat": "Optional dieselbe Ausgabe während des Klingelns erneut anstoßen.",
+          "actions_escalate": "Hier zum Beispiel einen zweiten Media Player starten. Läuft einmalig nach N Wiederholungen oder N Schlummern.",
+          "actions_snooze": "Läuft sofort beim Drücken von Schlummern; hier Musik pausieren oder stoppen.",
+          "actions_dismiss": "Läuft bei manuellem Beenden oder Bestätigung durch den Bewegungsmelder.",
+          "actions_cleanup": "Letzte gemeinsame Aufräumfolge nach Beenden oder Zeitüberschreitung."
         }
       },
       "review": {
@@ -124,23 +127,22 @@
         "description": "Wiederholungsrhythmus und Schlummern sind getrennt. Das Zeitlimit gilt für den gesamten Vorgang.",
         "data": {
           "pre_alarm_minutes": "Vorlauf Voralarm (Minuten)", "repeat_interval_minutes": "Wiederholungsintervall (Minuten)",
-          "escalate_after_repeats": "Eskalation nach Wiederholungen (0 deaktiviert)", "snooze_minutes": "Schlummerdauer (Minuten)",
+          "escalate_after_repeats": "Eskalation nach Wiederholungen (0 deaktiviert)", "escalate_after_snoozes": "Eskalation nach Schlummern (0 deaktiviert)", "snooze_minutes": "Schlummerdauer (Minuten)",
           "max_snoozes": "Maximales Schlummern (0 deaktiviert)", "timeout_minutes": "Sicherheitsabschaltung (Minuten)",
           "terminal_state_minutes": "Endstatus anzeigen (Minuten)"
         }
       },
       "guards": {
         "title": "Bedingungen und Sperren",
-        "description": "Leere ein Feld, um eine bestehende Verknüpfung zu entfernen.",
+        "description": "Alle Alarm-Startbedingungen müssen erfüllt sein. Beispiel für mindestens zwei Personen zu Hause: Numerischer Zustand → zone.home → über 1.",
         "data": {
           "workday_sensor": "Arbeitstag-Sensor", "vacation_entity": "Urlaubsmodus-Entität", "confirmation_sensor": "Aufsteh-Bestätigung",
-          "block_non_workdays": "An Nicht-Arbeitstagen vollständig sperren", "allow_entity": "Nur freigeben, wenn Entität…", "allow_state": "…diesen Zustand hat",
-          "block_entity": "Sperren, wenn Entität…", "block_state": "…diesen Zustand hat"
+          "block_non_workdays": "An Nicht-Arbeitstagen vollständig sperren", "start_conditions": "Alarm-Startbedingungen"
         }
       },
       "actions": {
         "title": "Aktionsphasen",
-        "description": "Jede Phase ist optional und verwendet normale Home-Assistant-Aktionen.",
+        "description": "Start läuft auch nach jedem Snooze erneut; Schlummern sofort beim Tastendruck; Eskalieren einmalig nach dem eingestellten Wiederholungs- oder Snooze-Grenzwert.",
         "data": {
           "actions_prepare": "Vorbereiten / Voralarm", "actions_start": "Start", "actions_repeat": "Wiederholen", "actions_escalate": "Eskalieren",
           "actions_snooze": "Schlummern", "actions_dismiss": "Beenden / bestätigt", "actions_timeout": "Zeitüberschreitung", "actions_cleanup": "Aufräumen"

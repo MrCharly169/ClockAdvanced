@@ -6,7 +6,10 @@ from homeassistant.components.diagnostics import async_redact_data
 
 from .const import (
     ACTION_PHASES,
+    CONF_ALLOW_ENTITY,
+    CONF_BLOCK_ENTITY,
     CONF_CONFIRMATION_SENSOR,
+    CONF_START_CONDITIONS,
     CONF_VACATION_ENTITY,
     CONF_WORKDAY_SENSOR,
     action_key,
@@ -20,6 +23,9 @@ async def async_get_config_entry_diagnostics(hass, entry):
         CONF_WORKDAY_SENSOR,
         CONF_VACATION_ENTITY,
         CONF_CONFIRMATION_SENSOR,
+        CONF_ALLOW_ENTITY,
+        CONF_BLOCK_ENTITY,
+        CONF_START_CONDITIONS,
         *(action_key(phase) for phase in ACTION_PHASES),
     ]
     return {

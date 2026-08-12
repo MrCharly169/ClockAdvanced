@@ -15,9 +15,12 @@ from .const import (
     CONF_ALLOW_STATE,
     CONF_BLOCK_NON_WORKDAYS,
     CONF_BLOCK_STATE,
+    CONF_ESCALATE_AFTER_SNOOZES,
     CONF_SCHEDULE_SOURCE,
+    CONF_START_CONDITIONS,
     DEFAULT_ALLOW_STATE,
     DEFAULT_BLOCK_STATE,
+    DEFAULT_ESCALATE_AFTER_SNOOZES,
     DEFAULT_SCHEDULE_SOURCE,
     DOMAIN,
     PLATFORMS,
@@ -150,32 +153,63 @@ async def async_unload_entry(hass: HomeAssistant, entry: ClockAdvancedConfigEntr
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate the grouped prototype schedule to the seven-day schema."""
-    if entry.version >= 3:
+    if entry.version >= 4:
         return True
 
     def migrate(values: dict) -> dict:
         result = dict(values)
-        grouped = (
-            result.pop("mon_wed_time", "06:00:00"),
-            result.pop("thu_fri_time", "07:00:00"),
-            result.pop("weekend_time", "08:00:00"),
-        )
-        for index, day in enumerate(WEEKDAYS):
-            result.setdefault(day_enabled_key(day), True)
-            group = 0 if index <= 2 else 1 if index <= 4 else 2
-            result.setdefault(day_time_key(day), grouped[group])
+        if entry.version < 3:
+            grouped = (
+                result.pop("mon_wed_time", "06:00:00"),
+                result.pop("thu_fri_time", "07:00:00"),
+                result.pop("weekend_time", "08:00:00"),
+            )
+            for index, day in enumerate(WEEKDAYS):
+                result.setdefault(day_enabled_key(day), True)
+                group = 0 if index <= 2 else 1 if index <= 4 else 2
+                result.setdefault(day_time_key(day), grouped[group])
         if "occupancy_sensor" in result and "confirmation_sensor" not in result:
             result["confirmation_sensor"] = result.pop("occupancy_sensor")
         result.setdefault(CONF_SCHEDULE_SOURCE, DEFAULT_SCHEDULE_SOURCE)
         result.setdefault(CONF_ALLOW_STATE, DEFAULT_ALLOW_STATE)
         result.setdefault(CONF_BLOCK_STATE, DEFAULT_BLOCK_STATE)
         result.setdefault(CONF_BLOCK_NON_WORKDAYS, False)
+        native_conditions = list(result.get(CONF_START_CONDITIONS) or [])
+        if allow_entity := result.pop("allow_entity", None):
+            native_conditions.append(
+                {
+                    "condition": "state",
+                    "entity_id": allow_entity,
+                    "state": result.pop(CONF_ALLOW_STATE, DEFAULT_ALLOW_STATE),
+                }
+            )
+        else:
+            result.pop(CONF_ALLOW_STATE, None)
+        if block_entity := result.pop("block_entity", None):
+            native_conditions.append(
+                {
+                    "condition": "not",
+                    "conditions": [
+                        {
+                            "condition": "state",
+                            "entity_id": block_entity,
+                            "state": result.pop(CONF_BLOCK_STATE, DEFAULT_BLOCK_STATE),
+                        }
+                    ],
+                }
+            )
+        else:
+            result.pop(CONF_BLOCK_STATE, None)
+        result[CONF_START_CONDITIONS] = native_conditions
+        result.setdefault(
+            CONF_ESCALATE_AFTER_SNOOZES, DEFAULT_ESCALATE_AFTER_SNOOZES
+        )
         return result
 
     hass.config_entries.async_update_entry(
         entry,
         data=migrate(dict(entry.data)),
         options=migrate(dict(entry.options)) if entry.options else {},
-        version=3,
+        version=4,
     )
     return True

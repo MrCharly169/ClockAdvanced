@@ -17,13 +17,16 @@ from .const import (
     CONF_BLOCK_NON_WORKDAYS,
     CONF_BLOCK_STATE,
     CONF_CONFIRMATION_SENSOR,
+    CONF_ESCALATE_AFTER_SNOOZES,
     CONF_PRE_ALARM_MINUTES,
     CONF_SCHEDULE_ENTITY,
     CONF_SCHEDULE_SOURCE,
+    CONF_START_CONDITIONS,
     CONF_TIMEOUT_MINUTES,
     CONF_VACATION_ENTITY,
     CONF_WORKDAY_SENSOR,
     DEFAULT_PRE_ALARM_MINUTES,
+    DEFAULT_ESCALATE_AFTER_SNOOZES,
     DEFAULT_ALLOW_STATE,
     DEFAULT_BLOCK_STATE,
     DEFAULT_SCHEDULE_SOURCE,
@@ -100,6 +103,9 @@ class ClockStatusSensor(ClockAdvancedEntity, SensorEntity):
             "confirmation": self.runtime.config.get(CONF_CONFIRMATION_SENSOR),
             "allow": self.runtime.config.get(CONF_ALLOW_ENTITY),
             "block": self.runtime.config.get(CONF_BLOCK_ENTITY),
+            "native_conditions": len(
+                self.runtime.config.get(CONF_START_CONDITIONS) or []
+            ),
         }
         return {
             "card_contract": CARD_CONTRACT_VERSION,
@@ -150,6 +156,12 @@ class ClockStatusSensor(ClockAdvancedEntity, SensorEntity):
                 ),
                 "timeout_minutes": int(
                     self.runtime.setting(CONF_TIMEOUT_MINUTES, DEFAULT_TIMEOUT_MINUTES)
+                ),
+                "escalate_after_snoozes": int(
+                    self.runtime.setting(
+                        CONF_ESCALATE_AFTER_SNOOZES,
+                        DEFAULT_ESCALATE_AFTER_SNOOZES,
+                    )
                 ),
                 "block_non_workdays": bool(
                     self.runtime.config.get(CONF_BLOCK_NON_WORKDAYS, False)

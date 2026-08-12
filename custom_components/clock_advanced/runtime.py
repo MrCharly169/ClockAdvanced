@@ -9,7 +9,9 @@ import logging
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EVENT_STATE_CHANGED
 from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
+from homeassistant.helpers import condition
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
     async_track_point_in_utc_time,
@@ -30,6 +32,7 @@ from .const import (
     CONF_BLOCK_STATE,
     CONF_CONFIRMATION_SENSOR,
     CONF_ESCALATE_AFTER_REPEATS,
+    CONF_ESCALATE_AFTER_SNOOZES,
     CONF_HOLIDAY_ENABLED,
     CONF_HOLIDAY_TIME,
     CONF_MAX_SNOOZES,
@@ -40,11 +43,13 @@ from .const import (
     CONF_SCHEDULE_ENTITY,
     CONF_SCHEDULE_SOURCE,
     CONF_SNOOZE_MINUTES,
+    CONF_START_CONDITIONS,
     CONF_TERMINAL_STATE_MINUTES,
     CONF_TIMEOUT_MINUTES,
     CONF_VACATION_ENTITY,
     CONF_WORKDAY_SENSOR,
     DEFAULT_ESCALATE_AFTER_REPEATS,
+    DEFAULT_ESCALATE_AFTER_SNOOZES,
     DEFAULT_ALLOW_STATE,
     DEFAULT_BLOCK_STATE,
     DEFAULT_HOLIDAY_TIME,
@@ -131,6 +136,7 @@ class ClockRuntime:
             hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}"
         )
         self._scripts: dict[str, Script] = {}
+        self._condition_checker: condition.ConditionsChecker | None = None
         self._unsubscribers: list[Callable[[], None]] = []
         self._cancel_alarm: Callable[[], None] | None = None
         self._cancel_pre_alarm: Callable[[], None] | None = None
@@ -232,7 +238,16 @@ class ClockRuntime:
             )
             if entity_id
         ]
-        if watched:
+        if self._condition_checker is not None:
+            self._unsubscribers.append(
+                self.hass.bus.async_listen(EVENT_STATE_CHANGED, self._handle_state_change)
+            )
+            self._unsubscribers.append(
+                async_track_time_change(
+                    self.hass, self._handle_condition_refresh, second=0
+                )
+            )
+        elif watched:
             self._unsubscribers.append(
                 async_track_state_change_event(self.hass, watched, self._handle_state_change)
             )
@@ -246,6 +261,9 @@ class ClockRuntime:
         self._cancel_timers()
         for script in self._scripts.values():
             await script.async_unload()
+        if self._condition_checker is not None:
+            self._condition_checker.async_unload()
+            self._condition_checker = None
         await self._store.async_save(asdict(self.state))
 
     async def _async_build_scripts(self) -> None:
@@ -259,6 +277,19 @@ class ClockRuntime:
                 DOMAIN,
                 script_mode="parallel",
                 max_runs=10,
+            )
+        raw_conditions = self.config.get(CONF_START_CONDITIONS) or []
+        if isinstance(raw_conditions, dict):
+            raw_conditions = [raw_conditions]
+        if raw_conditions:
+            validated = await condition.async_validate_conditions_config(
+                self.hass, list(raw_conditions)
+            )
+            self._condition_checker = await condition.async_conditions_from_config(
+                self.hass,
+                validated,
+                _LOGGER,
+                f"{self.entry.title}: alarm start",
             )
 
     def _state_is_on(self, entity_id: str | None) -> bool:
@@ -289,6 +320,10 @@ class ClockRuntime:
             block_entity, str(config.get(CONF_BLOCK_STATE, DEFAULT_BLOCK_STATE))
         ):
             return "block_condition"
+        if self._condition_checker is not None and not self._condition_checker(
+            {"clock_advanced": self._event_data()}
+        ):
+            return "start_conditions"
         return None
 
     def _parse_datetime(self, value: str | datetime | None) -> datetime | None:
@@ -498,7 +533,6 @@ class ClockRuntime:
         self.state.snooze_count += 1
         self.state.status = STATUS_SNOOZED
         self.state.repeat_count = 0
-        self.state.escalated = False
         self._cancel_named("_cancel_repeat")
         snooze_until = dt_util.now() + timedelta(
             minutes=int(self.setting(CONF_SNOOZE_MINUTES, DEFAULT_SNOOZE_MINUTES))
@@ -543,6 +577,22 @@ class ClockRuntime:
         self.hass.async_create_task(self.async_refresh_schedule())
 
     @callback
+    def _handle_condition_refresh(self, _now: datetime) -> None:
+        """Re-evaluate time/template conditions even without an entity transition."""
+        block_reason = self._guard_block_reason()
+        if self.state.status in ACTIVE_STATUSES and block_reason:
+            self.hass.async_create_task(self.async_dismiss(block_reason))
+            return
+        guard_state_changed = (
+            self.state.status == STATUS_BLOCKED and block_reason is None
+        ) or (
+            self.state.status not in {STATUS_BLOCKED, STATUS_VACATION}
+            and block_reason is not None
+        )
+        if guard_state_changed:
+            self.hass.async_create_task(self.async_refresh_schedule())
+
+    @callback
     def _handle_state_change(self, event: Event[EventStateChangedData]) -> None:
         entity_id = event.data["entity_id"]
         old_state = event.data["old_state"]
@@ -577,6 +627,16 @@ class ClockRuntime:
         if self.state.status in ACTIVE_STATUSES and block_reason:
             self.hass.async_create_task(self.async_dismiss(block_reason))
             return
+        if self._condition_checker is not None:
+            guard_state_changed = (
+                self.state.status == STATUS_BLOCKED and block_reason is None
+            ) or (
+                self.state.status not in {STATUS_BLOCKED, STATUS_VACATION}
+                and block_reason is not None
+            )
+            if guard_state_changed:
+                self.hass.async_create_task(self.async_refresh_schedule())
+                return
         if entity_id in {
             self.config.get(CONF_WORKDAY_SENSOR),
             self.config.get(CONF_VACATION_ENTITY),
@@ -601,6 +661,9 @@ class ClockRuntime:
         self.state.occurrence_alarm = (
             self.next_alarm.isoformat() if self.next_alarm else None
         )
+        if self._state_is_on(self.config.get(CONF_CONFIRMATION_SENSOR)):
+            await self.async_dismiss("confirmation")
+            return
         self._launch_phase(PHASE_PREPARE)
         self._updated()
 
@@ -639,7 +702,27 @@ class ClockRuntime:
         self.state.snooze_until = None
         self.next_alarm = None
         self.pre_alarm_at = None
+        if self._state_is_on(self.config.get(CONF_CONFIRMATION_SENSOR)):
+            await self.async_dismiss("confirmation")
+            return
         self._launch_phase(PHASE_START, trigger_kind=trigger_kind)
+        snooze_threshold = int(
+            self.setting(
+                CONF_ESCALATE_AFTER_SNOOZES, DEFAULT_ESCALATE_AFTER_SNOOZES
+            )
+        )
+        if (
+            trigger_kind == "snooze"
+            and snooze_threshold > 0
+            and self.state.snooze_count >= snooze_threshold
+            and not self.state.escalated
+        ):
+            self.state.escalated = True
+            self._launch_phase(
+                PHASE_ESCALATE,
+                trigger_kind="snooze",
+                snooze_count=self.state.snooze_count,
+            )
         self._schedule_repeat()
         self._updated()
 

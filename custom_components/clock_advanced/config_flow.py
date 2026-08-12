@@ -20,6 +20,7 @@ from .const import (
     CONF_BLOCK_STATE,
     CONF_CONFIRMATION_SENSOR,
     CONF_ESCALATE_AFTER_REPEATS,
+    CONF_ESCALATE_AFTER_SNOOZES,
     CONF_HOLIDAY_ENABLED,
     CONF_HOLIDAY_TIME,
     CONF_MAX_SNOOZES,
@@ -31,11 +32,13 @@ from .const import (
     CONF_SCHEDULE_ENTITY,
     CONF_SCHEDULE_SOURCE,
     CONF_SNOOZE_MINUTES,
+    CONF_START_CONDITIONS,
     CONF_TERMINAL_STATE_MINUTES,
     CONF_TIMEOUT_MINUTES,
     CONF_VACATION_ENTITY,
     CONF_WORKDAY_SENSOR,
     DEFAULT_ESCALATE_AFTER_REPEATS,
+    DEFAULT_ESCALATE_AFTER_SNOOZES,
     DEFAULT_ALLOW_STATE,
     DEFAULT_BLOCK_STATE,
     DEFAULT_HOLIDAY_TIME,
@@ -132,6 +135,10 @@ def _behavior_schema() -> vol.Schema:
                 CONF_ESCALATE_AFTER_REPEATS,
                 default=DEFAULT_ESCALATE_AFTER_REPEATS,
             ): _number(0, 20),
+            vol.Required(
+                CONF_ESCALATE_AFTER_SNOOZES,
+                default=DEFAULT_ESCALATE_AFTER_SNOOZES,
+            ): _number(0, 20),
             vol.Required(CONF_SNOOZE_MINUTES, default=DEFAULT_SNOOZE_MINUTES): _number(
                 1, 120
             ),
@@ -164,18 +171,7 @@ def _guards_schema() -> vol.Schema:
             vol.Required(
                 CONF_BLOCK_NON_WORKDAYS, default=False
             ): selector.BooleanSelector(),
-            vol.Optional(CONF_ALLOW_ENTITY): selector.EntitySelector(
-                selector.EntitySelectorConfig()
-            ),
-            vol.Required(
-                CONF_ALLOW_STATE, default=DEFAULT_ALLOW_STATE
-            ): selector.TextSelector(),
-            vol.Optional(CONF_BLOCK_ENTITY): selector.EntitySelector(
-                selector.EntitySelectorConfig()
-            ),
-            vol.Required(
-                CONF_BLOCK_STATE, default=DEFAULT_BLOCK_STATE
-            ): selector.TextSelector(),
+            vol.Optional(CONF_START_CONDITIONS, default=[]): selector.ConditionSelector(),
         }
     )
 
@@ -192,7 +188,7 @@ def _actions_schema() -> vol.Schema:
 class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Create a generic advanced clock through a guided wizard."""
 
-    VERSION = 3
+    VERSION = 4
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}
@@ -300,10 +296,10 @@ class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_WORKDAY_SENSOR,
             CONF_VACATION_ENTITY,
             CONF_CONFIRMATION_SENSOR,
-            CONF_ALLOW_ENTITY,
-            CONF_BLOCK_ENTITY,
         )
-        guard_count = sum(bool(self._data.get(key)) for key in guard_keys)
+        guard_count = sum(bool(self._data.get(key)) for key in guard_keys) + len(
+            self._data.get(CONF_START_CONDITIONS) or []
+        )
         action_count = sum(bool(self._data.get(action_key(phase))) for phase in ACTION_PHASES)
         return {
             "name": str(self._data[CONF_NAME]),
@@ -382,8 +378,11 @@ class ClockAdvancedOptionsFlow(config_entries.OptionsFlowWithReload):
             CONF_WORKDAY_SENSOR,
             CONF_VACATION_ENTITY,
             CONF_CONFIRMATION_SENSOR,
+            CONF_START_CONDITIONS,
             CONF_ALLOW_ENTITY,
+            CONF_ALLOW_STATE,
             CONF_BLOCK_ENTITY,
+            CONF_BLOCK_STATE,
         )
         if user_input is not None:
             return self._save(user_input, keys)

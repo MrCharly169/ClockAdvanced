@@ -23,7 +23,7 @@ Its **Clock Lab** view renders the native Badge, a weekly Advanced card, a Sched
 powershell -ExecutionPolicy Bypass -File .\scripts\dev.ps1 smoke
 ```
 
-The smoke test validates the full HA configuration, the public Card contract, every referenced control entity, the served Card and Badge module, local brand delivery, vacation handling, and the enabled switch. It restores every helper it changes. Alarm start, repeat/escalation, snooze, dismiss, confirmation, and skip remain deliberate lifecycle tests because they wait on real scheduler events. For Schedule-helper lifecycle testing, use a one-minute block and verify that only the real `off` → `on` edge starts an alarm.
+The smoke test validates the full HA configuration, the public Card contract, every referenced control entity, the served Card and Badge module, local brand delivery, vacation handling, native state/NOT/numeric conditions, and the enabled switch. It restores every helper it changes. Alarm start, repeat/escalation, snooze, dismiss, confirmation, and skip remain deliberate lifecycle tests because they wait on real scheduler events. For Schedule-helper lifecycle testing, use a one-minute block and verify that only the real `off` → `on` edge starts an alarm.
 
 The repository provides the destructive-to-lab-only lifecycle check below. It temporarily activates the editable Schedule helper, verifies `ringing`, dismisses the alarm, and restores the original schedule and guard states:
 

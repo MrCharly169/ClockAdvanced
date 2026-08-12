@@ -4,7 +4,8 @@ param(
     [string]$ConditionEntity = "sensor.schedule_helper_lab_status",
     [string]$VacationEntity = "input_boolean.vacation_mode",
     [string]$AllowEntity = "input_boolean.allow_alarm",
-    [string]$BlockEntity = "input_boolean.quiet_mode"
+    [string]$BlockEntity = "input_boolean.quiet_mode",
+    [string]$NumericEntity = "input_number.home_count"
 )
 
 $ErrorActionPreference = "Stop"
@@ -74,6 +75,16 @@ function Restore-LabBoolean {
     Invoke-LabService $Domain $Service $EntityId
 }
 
+function Set-LabNumber {
+    param(
+        [string]$EntityId,
+        [double]$Value
+    )
+    Invoke-RestMethod -Method Post -Uri "$BaseUrl/api/services/input_number/set_value" `
+        -Headers $Headers -ContentType "application/json" `
+        -Body (@{ entity_id = $EntityId; value = $Value } | ConvertTo-Json) | Out-Null
+}
+
 $ConfigResult = Invoke-RestMethod -Method Post -Uri "$BaseUrl/api/config/core/check_config" `
     -Headers $Headers -ContentType "application/json" -Body "{}"
 if ($ConfigResult.result -ne "valid") {
@@ -131,6 +142,7 @@ if ($BrandResponse.StatusCode -ne 200 -or $BrandResponse.RawContentLength -lt 10
 $VacationOriginal = (Get-LabState $VacationEntity).state
 $AllowOriginal = (Get-LabState $AllowEntity).state
 $BlockOriginal = (Get-LabState $BlockEntity).state
+$NumericOriginal = [double](Get-LabState $NumericEntity).state
 $EnabledEntity = $Attributes.controls.enabled
 $EnabledOriginal = (Get-LabState $EnabledEntity).state
 
@@ -150,6 +162,11 @@ try {
     Invoke-LabService "input_boolean" "turn_off" $BlockEntity
     Wait-LabState $ConditionEntity "scheduled"
 
+    Set-LabNumber $NumericEntity 1
+    Wait-LabState $ConditionEntity "blocked"
+    Set-LabNumber $NumericEntity 2
+    Wait-LabState $ConditionEntity "scheduled"
+
     Invoke-LabService "switch" "turn_off" $EnabledEntity
     Wait-LabState $Entity "disabled"
     Invoke-LabService "switch" "turn_on" $EnabledEntity
@@ -158,6 +175,7 @@ try {
     Restore-LabBoolean $VacationEntity $VacationOriginal
     Restore-LabBoolean $AllowEntity $AllowOriginal
     Restore-LabBoolean $BlockEntity $BlockOriginal
+    Set-LabNumber $NumericEntity $NumericOriginal
     Restore-LabBoolean $EnabledEntity $EnabledOriginal
 }
 
@@ -166,4 +184,4 @@ Write-Output "  HA configuration: $($ConfigResult.result)"
 Write-Output "  Status entity: $Entity"
 Write-Output "  Card contract: $($Attributes.card_contract)"
 Write-Output "  Card, Badge, and local brand: PASS"
-Write-Output "  Vacation, allow, block, and enabled guards: PASS (original states restored)"
+Write-Output "  Vacation, native state/not/numeric, and enabled guards: PASS (original states restored)"

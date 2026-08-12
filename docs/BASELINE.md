@@ -24,6 +24,8 @@
 - Optional exact-state allow and block conditions are generic; no room, person, or helper entity is hard-coded.
 - A guard becoming blocking during an active session dismisses the alarm safely.
 - Repeat cadence never increments the snooze count. Snooze never increments the repeat count.
+- The Start action sequence runs for the initial alarm and after each completed snooze; one Escalate sequence may be triggered by either the configured repeat threshold or snooze threshold.
+- Native Home Assistant start conditions are ANDed and checked before pre-alarm and alarm start. A blocker becoming active during a session dismisses it safely.
 - The configured timeout bounds the complete active session, including snoozes and restarts.
 - `cleanup` follows `dismiss` or `timeout`; action failures remain visible without corrupting the schedule.
 - The status sensor exposes only the versioned public Card contract, not configured action payloads.

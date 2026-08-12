@@ -90,6 +90,15 @@ class PackageTests(unittest.TestCase):
         self.assertIn("CONF_VACATION_ENTITY", diagnostics)
         self.assertNotIn('"actions": runtime.config', diagnostics)
 
+    def test_native_conditions_and_snooze_escalation_are_shipped(self) -> None:
+        config_flow = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
+        runtime = (COMPONENT / "runtime.py").read_text(encoding="utf-8")
+        diagnostics = (COMPONENT / "diagnostics.py").read_text(encoding="utf-8")
+        self.assertIn("selector.ConditionSelector()", config_flow)
+        self.assertIn("async_validate_conditions_config", runtime)
+        self.assertIn("CONF_ESCALATE_AFTER_SNOOZES", runtime)
+        self.assertIn("CONF_START_CONDITIONS", diagnostics)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -56,6 +56,8 @@ const TEXT = {
     safety: "Safety timeout",
     allowedWhen: "Allowed when",
     blockedWhen: "Blocked when",
+    nativeConditions: "Start conditions",
+    conditions: "conditions",
     notConfigured: "Not configured",
     after: "after",
     minutes: "minutes",
@@ -116,6 +118,8 @@ const TEXT = {
     safety: "Sicherheitsende",
     allowedWhen: "Freigabe",
     blockedWhen: "Sperre",
+    nativeConditions: "Startbedingungen",
+    conditions: "Bedingungen",
     notConfigured: "Nicht konfiguriert",
     after: "nach",
     minutes: "Minuten",
@@ -303,6 +307,7 @@ class ClockAdvancedCard extends HTMLElement {
         <div class="detail-row"><span>${esc(t.confirmation)}</span><strong>${esc(this._guardLabel(guards.confirmation, lang))}</strong></div>
         ${guards.allow ? `<div class="detail-row"><span>${esc(t.allowedWhen)}</span><strong>${esc(this._guardLabel(guards.allow, lang))} = ${esc(settings.allow_state)}</strong></div>` : ""}
         ${guards.block ? `<div class="detail-row"><span>${esc(t.blockedWhen)}</span><strong>${esc(this._guardLabel(guards.block, lang))} = ${esc(settings.block_state)}</strong></div>` : ""}
+        ${guards.native_conditions ? `<div class="detail-row"><span>${esc(t.nativeConditions)}</span><strong>${esc(guards.native_conditions)} ${esc(t.conditions)}</strong></div>` : ""}
         <div class="detail-row"><span>${esc(t.safety)}</span><strong>${esc(t.after)} ${esc(settings.timeout_minutes ?? "—")} ${esc(t.minutes)}</strong></div>
         <p>${esc(t.summary)}</p>
       </section>` : "";
