@@ -9,13 +9,13 @@
       },
       "source": {
         "title": "Choose the alarm source",
-        "description": "Step 2 of 7 · Use Clock Advanced's exact weekly alarm times, or trigger when a Home Assistant Schedule helper changes from off to on.",
+        "description": "Step 2 of 7 · Use Clock Advanced's exact weekly alarm times, or trigger when a native Home Assistant schedule entity changes from off to on.",
         "data": { "schedule_source": "Alarm source" }
       },
       "helper_schedule": {
-        "title": "Select a Schedule helper",
-        "description": "Step 3 of 7 · The alarm starts at the beginning of every active block. Create or edit the helper under Settings → Devices & services → Helpers.",
-        "data": { "schedule_entity": "Schedule helper" }
+        "title": "Select a Home Assistant schedule",
+        "description": "Step 3 of 7 · The alarm starts at the beginning of every active block of the selected native schedule entity.",
+        "data": { "schedule_entity": "Schedule entity" }
       },
       "schedule": {
         "title": "Weekly schedule",
@@ -89,7 +89,7 @@
       }
     },
     "error": {
-      "schedule_required": "Select a Schedule helper for this source.",
+      "schedule_required": "Select a schedule entity for this source.",
       "confirmation_required": "Confirm the summary before creating this alarm clock."
     }
   },
@@ -97,16 +97,16 @@
     "step": {
       "init": {
         "title": "Clock Advanced settings",
-        "description": "Open one section. Saving reloads this clock without restarting Home Assistant.",
+        "description": "All settings for this integration are grouped here by section. Saving reloads only this alarm clock.",
         "menu_options": {
-          "source": "Alarm source", "schedule": "Weekly schedule", "behavior": "Alarm lifecycle",
-          "guards": "Optional guards", "actions": "Action phases"
+          "source": "General & alarm source", "schedule": "Internal weekly schedule", "behavior": "Lifecycle & escalation",
+          "guards": "Conditions & confirmation", "actions": "Actions & media"
         }
       },
       "source": {
-        "title": "Alarm source",
-        "description": "Choose the internal weekly schedule or a Home Assistant Schedule helper. A helper is required for the Schedule-helper source.",
-        "data": { "schedule_source": "Alarm source", "schedule_entity": "Schedule helper" }
+        "title": "General & alarm source",
+        "description": "Change the name and choose either the built-in weekly schedule or an existing native Home Assistant schedule entity.",
+        "data": { "name": "Name", "schedule_source": "Alarm source", "schedule_entity": "Schedule entity (optional)" }
       },
       "schedule": {
         "title": "Weekly schedule",
@@ -150,7 +150,7 @@
         }
       }
     },
-    "error": { "schedule_required": "Select a Schedule helper for this source." }
+    "error": { "schedule_required": "Select a schedule entity for this source." }
   },
   "entity": {
     "binary_sensor": { "alarm_active": { "name": "Alarm session active" } },
@@ -170,6 +170,6 @@
     }
   },
   "selector": {
-    "schedule_source": { "options": { "weekly": "Clock Advanced weekly schedule", "schedule_entity": "Home Assistant Schedule helper" } }
+    "schedule_source": { "options": { "weekly": "Clock Advanced weekly schedule", "schedule_entity": "Home Assistant schedule entity" } }
   }
 }

@@ -12,7 +12,9 @@
 | Suppression | Disabled and vacation states arm no alarm | `tests/test_schedule.py` |
 | Card contract | Permanent resource, contract and standard control map stay coherent | `tests/test_package.py` |
 | Card API | Registration, editor, stub, grid sizing and entity suggestions work | `tests/test_card_runtime.js` |
+| Stable Card DOM | Root/button identity, focus, countdown, statuses, rapid guards/controls and simulated scroll remain stable | `tests/test_card_runtime.js`, Docker browser test |
 | Badge API | Registration, editor, stub and Home Assistant picker metadata work | `tests/test_card_runtime.js` |
+| Stable Badge DOM | Native Badge identity, focus, states and simulated/live scroll remain stable | `tests/test_card_runtime.js`, Docker browser test |
 | Native editing | Storage dashboard, storage Schedule helper and native Card/Badge editors remain UI-editable | Docker browser test |
 | Onboarding notification | Entity-aware retry creates one Easy Card and native Badge notification per new clock | `tests/test_package.py`, Docker browser test |
 | Brand assets | Required local light/dark icons and logos are packaged and served | `tests/test_package.py`, HA smoke test |

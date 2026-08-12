@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* Seed the disposable HA lab with UI-managed resources, dashboard, and Schedule helper. */
 
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -125,7 +125,16 @@ for (let attempt = 0; attempt < 20; attempt += 1) {
   await new Promise((resolve) => setTimeout(resolve, 250));
 }
 if (!onboardingNotification) {
-  throw new Error("Clock Advanced Card and Badge onboarding notification is missing");
+  const storageDirectory = path.join(root, ".dev", "ha-config", ".storage");
+  const storageFiles = (await readdir(storageDirectory))
+    .filter((name) => name.startsWith("clock_advanced."));
+  const alreadySent = (await Promise.all(storageFiles.map(async (name) => {
+    const stored = JSON.parse(await readFile(path.join(storageDirectory, name), "utf8"));
+    return stored.data?.card_notification_sent === true;
+  }))).some(Boolean);
+  if (!alreadySent) {
+    throw new Error("Clock Advanced Card and Badge onboarding notification is missing");
+  }
 }
 socket.close();
 

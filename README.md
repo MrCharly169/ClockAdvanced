@@ -24,12 +24,12 @@ Deutsch: Clock Advanced ist eine generische Home-Assistant-Weckerintegration mit
 
 The UI wizard deliberately walks through seven small decisions: name, alarm source, schedule, conditions, lifecycle behavior, actions, and a final review. Every setting remains editable later from the integration options.
 
-Der UI-Assistent führt bewusst in sieben übersichtlichen Schritten durch Name, Weckzeit-Quelle, Zeitplan, Bedingungen, Ablaufverhalten, Aktionen und eine abschließende Prüfung. Alle Werte bleiben danach über die Integrationsoptionen änderbar.
+Clock Advanced ist eine normale Integration unter **Einstellungen → Geräte & Dienste → Integrationen** – kein Helper. Der UI-Assistent führt bewusst in sieben übersichtlichen Schritten durch Name, Weckzeit-Quelle, Zeitplan, Bedingungen, Ablaufverhalten, Aktionen und eine abschließende Prüfung. Name und alle Funktionsbereiche bleiben danach über **Konfigurieren** in den gegliederten Integrationsoptionen änderbar.
 
 ### Alarm sources / Weckzeit-Quellen
 
 - **Weekly schedule / Wochenplan:** Clock Advanced stores one enabled time per weekday. This is the simple, self-contained default.
-- **Home Assistant Schedule helper / Zeitplan-Helfer:** Select any UI-managed `schedule.*` helper. The displayed next alarm comes from its `next_event`; every new active block starts exactly one alarm. A block that is already active when Clock Advanced starts is also handled once, without retriggering after dismissal.
+- **Home Assistant schedule entity / Zeitplan-Entität (optional):** Select an existing UI-managed `schedule.*` entity as an external source. The displayed next alarm comes from its `next_event`; every new active block starts exactly one alarm. Clock Advanced itself remains a normal integration and does not create a Helper.
 - **One-time override / Einmalige Abweichung:** The generated `datetime` entity temporarily takes priority over either source.
 
 ### Conditions / Bedingungen
@@ -114,6 +114,8 @@ Die Ressourcen-URL ist dauerhaft und besitzt bewusst keinen Versionsparameter. D
 - `advanced`: complete weekly schedule, conditions and safety details / vollständiger Wochenplan, Bedingungen und Sicherheitsdetails
 
 `easy` is the default. Legacy `auto`/`standard` configurations are shown as Easy and legacy `kiosk` as Advanced. `language` accepts `auto`, `en`, or `de`. The Card is theme-aware, uses semantic state colors, respects reduced-motion preferences, supports the native graphical editor, Sections grid sizing, and Home Assistant's entity suggestion API.
+
+Card and Badge build their runtime Shadow DOM exactly once. Normal Home Assistant updates patch only visible text, semantic classes, attributes, button states, visibility and progress widths; the one-second timer changes only the existing countdown node's `textContent`. Interactive roots are not replaced, so focus and open details survive entity updates and the components never request page scrolling.
 
 ## Entities / Entitäten
 

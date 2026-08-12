@@ -50,7 +50,7 @@ const TEXT = {
     source: "Time source",
     weekly: "Weekly schedule",
     one_time: "One-time alarm",
-    schedule_entity: "HA Schedule helper",
+    schedule_entity: "HA schedule entity",
     workdayRule: "Workday rule",
     confirmation: "Wake confirmation",
     safety: "Safety timeout",
@@ -112,7 +112,7 @@ const TEXT = {
     source: "Zeitquelle",
     weekly: "Wochenplan",
     one_time: "Einmaliger Wecker",
-    schedule_entity: "HA-Zeitplan-Helfer",
+    schedule_entity: "HA-Zeitplan-Entität",
     workdayRule: "Arbeitstag",
     confirmation: "Aufstehbestätigung",
     safety: "Sicherheitsende",
@@ -160,7 +160,8 @@ class ClockAdvancedCard extends HTMLElement {
     }
     this._config = { mode: "easy", language: "auto", ...config };
     this._signature = undefined;
-    this._render();
+    this._ensureStructure();
+    this._patch();
   }
 
   set hass(value) {
@@ -168,44 +169,62 @@ class ClockAdvancedCard extends HTMLElement {
     const state = value?.states?.[this._config?.entity];
     const controls = state?.attributes?.controls || {};
     const attrs = state?.attributes || {};
-    const guardEntities = Object.values(attrs.guards || {})
-      .filter((entityId) => typeof entityId === "string");
-    const related = [...new Set([...Object.values(controls), ...guardEntities])]
-      .map((entityId) => {
-        const relatedState = value?.states?.[entityId];
-        return [entityId, relatedState?.state, relatedState?.attributes?.friendly_name];
-      });
+    const guards = attrs.guards || {};
+    const advanced = this._mode() === "advanced";
+    const controlStates = Object.entries(controls).map(([key, entityId]) => [
+      key,
+      entityId,
+      ["enabled", "skip_next", "holiday_mode"].includes(key)
+        ? value?.states?.[entityId]?.state
+        : undefined,
+    ]);
+    const visibleGuardKeys = advanced
+      ? ["workday", "confirmation", "allow", "block"]
+      : ["workday"];
+    const guardStates = visibleGuardKeys.map((key) => {
+      const entityId = guards[key];
+      const relatedState = value?.states?.[entityId];
+      return [
+        key,
+        entityId,
+        key === "workday" ? relatedState?.state : undefined,
+        relatedState?.attributes?.friendly_name,
+      ];
+    });
     const signature = state ? JSON.stringify([
-      this._config,
-      value.language,
+      this._config.entity,
+      this._config.title,
+      this._mode(),
+      this._lang(),
       state.state,
       attrs.name,
       attrs.friendly_name,
       attrs.next_alarm,
-      attrs.pre_alarm_at,
       attrs.active_since,
       attrs.snooze_until,
       attrs.repeat_count,
       attrs.snooze_count,
       attrs.snooze_available,
-      attrs.escalated,
       attrs.schedule_source,
-      attrs.schedule,
-      attrs.controls,
-      attrs.guards,
-      attrs.settings,
-      related,
-    ]) : JSON.stringify([this._config, value.language, "missing"]);
+      controlStates,
+      guardStates,
+      advanced ? guards.native_conditions : undefined,
+      advanced ? attrs.schedule : undefined,
+      advanced ? attrs.settings : undefined,
+    ]) : JSON.stringify([
+      this._config.entity, this._config.title, this._mode(), this._lang(), "missing",
+    ]);
     if (signature !== this._signature) {
       this._signature = signature;
-      this._render();
+      this._patch();
     }
     this._updateCountdown();
   }
 
   connectedCallback() {
     if (!this._timer) this._timer = window.setInterval(() => this._updateCountdown(), 1000);
-    this._render();
+    this._ensureStructure();
+    this._patch();
   }
 
   disconnectedCallback() {
@@ -280,13 +299,86 @@ class ClockAdvancedCard extends HTMLElement {
     return { prepare: 0, alarm: 0 };
   }
 
+  _ensureStructure() {
+    if (!this.shadowRoot || this._structureReady) return;
+    this.shadowRoot.innerHTML = `
+      <ha-card class="clock">
+        <div class="missing" data-missing hidden><span data-unavailable></span><small data-missing-entity></small></div>
+        <div class="card-body" data-card-body hidden>
+          <header><span class="brand" data-brand></span><button class="status-pill" data-action="more-info"><i></i><span data-status></span></button></header>
+          <h2 data-title></h2>
+          <main>
+            <div class="time" data-time></div>
+            <div class="context"><span data-context></span><span class="countdown" data-countdown></span></div>
+            <div class="metrics" data-metrics><span data-repeats></span><span data-snoozes></span></div>
+          </main>
+          <section class="progress-panel">
+            <div class="progress-row"><span data-prepare-label></span><div class="track"><i data-prepare-progress></i></div></div>
+            <div class="progress-row"><span data-alarm-label></span><div class="track secondary"><i data-alarm-progress></i></div></div>
+          </section>
+          <section class="schedule" data-schedule><div class="days">
+            ${Array.from({ length: 7 }, (_, index) => `<div class="day off" data-day="${index}"><span></span><strong>—</strong></div>`).join("")}
+          </div></section>
+          <div class="primary-actions" data-primary-actions>
+            <button class="primary snooze" data-action="press-snooze"><ha-icon icon="mdi:alarm-snooze"></ha-icon><span data-snooze-label></span></button>
+            <button class="primary dismiss" data-action="press-dismiss"><ha-icon icon="mdi:alarm-off"></ha-icon><span data-dismiss-label></span></button>
+          </div>
+          <div class="toggles">
+            <button data-action="toggle-skip" class="chip"><ha-icon icon="mdi:skip-next"></ha-icon><span data-skip-label></span></button>
+            <button data-action="toggle-holiday" class="chip"><ha-icon icon="mdi:palm-tree"></ha-icon><span data-holiday-label></span></button>
+            <button data-action="toggle-details" class="chip details-toggle"><ha-icon data-details-icon icon="mdi:chevron-up"></ha-icon><span data-details-label></span></button>
+          </div>
+          <section class="details" data-details>
+            <div class="detail-row"><span data-source-label></span><strong data-source-value></strong></div>
+            <div class="detail-row"><span data-workday-label></span><strong data-workday-value></strong></div>
+            <div class="detail-row"><span data-confirmation-label></span><strong data-confirmation-value></strong></div>
+            <div class="detail-row" data-allow-row><span data-allow-label></span><strong data-allow-value></strong></div>
+            <div class="detail-row" data-block-row><span data-block-label></span><strong data-block-value></strong></div>
+            <div class="detail-row" data-native-row><span data-native-label></span><strong data-native-value></strong></div>
+            <div class="detail-row"><span data-safety-label></span><strong data-safety-value></strong></div>
+            <p data-summary></p>
+          </section>
+        </div>
+      </ha-card>${this._styles()}`;
+    this._structureReady = true;
+  }
+
+  _node(selector) {
+    return this.shadowRoot?.querySelector(selector);
+  }
+
+  _text(selector, value) {
+    const node = this._node(selector);
+    const text = String(value ?? "");
+    if (node && node.textContent !== text) node.textContent = text;
+  }
+
+  _hidden(selector, value) {
+    const node = this._node(selector);
+    if (node && node.hidden !== Boolean(value)) node.hidden = Boolean(value);
+  }
+
   _render() {
+    this._ensureStructure();
+    this._patch();
+  }
+
+  _patch() {
     if (!this.shadowRoot || !this._config) return;
+    this._ensureStructure();
     const lang = this._lang();
     const t = TEXT[lang];
     const entity = this._hass?.states?.[this._config.entity];
+    const card = this._node("ha-card");
+    this._text("[data-unavailable]", t.unavailable);
+    this._text("[data-missing-entity]", this._config.entity);
+    this._hidden("[data-missing]", Boolean(entity));
+    this._hidden("[data-card-body]", !entity);
     if (!entity) {
-      this.shadowRoot.innerHTML = `<ha-card><div class="missing">${esc(t.unavailable)}<small>${esc(this._config.entity)}</small></div></ha-card>${this._styles()}`;
+      if (card) {
+        if (card.className !== "clock state-unavailable") card.className = "clock state-unavailable";
+        if (card.dataset.state !== "unavailable") card.dataset.state = "unavailable";
+      }
       return;
     }
     const attrs = entity.attributes || {};
@@ -305,52 +397,95 @@ class ClockAdvancedCard extends HTMLElement {
     const workdayState = guards.workday ? this._hass.states[guards.workday]?.state : null;
     const dayLabel = target ? target.toLocaleDateString(lang, { weekday: "long" }) : "";
     const dayKind = workdayState === "on" ? t.workday : workdayState === "off" ? t.nonWorkday : t.weekly;
-    const scheduleMarkup = mode === "advanced" && schedule.length ? `
-      <section class="schedule" aria-label="${esc(t.schedule)}">
-        <div class="days">${schedule.map((day, index) => `
-          <div class="day ${day.enabled ? "on" : "off"}">
-            <span>${esc(t.days[index] || day.day)}</span>
-            <strong>${day.enabled ? esc(String(day.time || "").slice(0, 2)) : "—"}</strong>
-          </div>`).join("")}</div>
-      </section>` : "";
-    const activeActions = active ? `
-      <div class="primary-actions">
-        <button class="primary snooze" data-action="press-snooze" ${!attrs.snooze_available || !controls.snooze ? "disabled" : ""}><ha-icon icon="mdi:alarm-snooze"></ha-icon>${esc(t.snooze)}</button>
-        <button class="primary dismiss" data-action="press-dismiss" ${!controls.dismiss ? "disabled" : ""}><ha-icon icon="mdi:alarm-off"></ha-icon>${esc(t.dismiss)}</button>
-      </div>` : "";
-    const detailsMarkup = mode === "advanced" && this._detailsOpen ? `
-      <section class="details">
-        <div class="detail-row"><span>${esc(t.source)}</span><strong>${esc(t[attrs.schedule_source] || t.weekly)}</strong></div>
-        <div class="detail-row"><span>${esc(t.workdayRule)}</span><strong>${esc(this._guardLabel(guards.workday, lang))}${workdayState ? ` · ${esc(workdayState === "on" ? t.workday : t.nonWorkday)}` : ""}</strong></div>
-        <div class="detail-row"><span>${esc(t.confirmation)}</span><strong>${esc(this._guardLabel(guards.confirmation, lang))}</strong></div>
-        ${guards.allow ? `<div class="detail-row"><span>${esc(t.allowedWhen)}</span><strong>${esc(this._guardLabel(guards.allow, lang))} = ${esc(settings.allow_state)}</strong></div>` : ""}
-        ${guards.block ? `<div class="detail-row"><span>${esc(t.blockedWhen)}</span><strong>${esc(this._guardLabel(guards.block, lang))} = ${esc(settings.block_state)}</strong></div>` : ""}
-        ${guards.native_conditions ? `<div class="detail-row"><span>${esc(t.nativeConditions)}</span><strong>${esc(guards.native_conditions)} ${esc(t.conditions)}</strong></div>` : ""}
-        <div class="detail-row"><span>${esc(t.safety)}</span><strong>${esc(t.after)} ${esc(settings.timeout_minutes ?? "—")} ${esc(t.minutes)}</strong></div>
-        <p>${esc(t.summary)}</p>
-      </section>` : "";
-    this.shadowRoot.innerHTML = `
-      <ha-card class="clock ${esc(mode)} state-${esc(entity.state)}" data-state="${esc(entity.state)}">
-        <header><span class="brand">${esc(t.brand)}</span><button class="status-pill ${enabled ? "enabled" : ""}" data-action="more-info"><i></i>${esc(statusText)}</button></header>
-        <h2>${esc(this._config.title || attrs.name || entity.attributes.friendly_name || "Clock Advanced")}</h2>
-        <main>
-          <div class="time">${esc(this._formatTime(target, lang))}</div>
-          <div class="context"><span>${esc(dayLabel)}${dayLabel ? " · " : ""}${esc(dayKind)}</span><span class="countdown" data-countdown></span></div>
-          ${active ? `<div class="metrics"><span>${attrs.repeat_count || 0} ${esc(t.repeats)}</span><span>${attrs.snooze_count || 0} ${esc(t.snoozes)}</span></div>` : ""}
-        </main>
-        <section class="progress-panel">
-          <div class="progress-row"><span>${esc(t.prepare)}</span><div class="track"><i style="width:${progress.prepare}%"></i></div></div>
-          <div class="progress-row"><span>${esc(t.alarm)}</span><div class="track secondary"><i style="width:${progress.alarm}%"></i></div></div>
-        </section>
-        ${scheduleMarkup}
-        ${activeActions}
-        <div class="toggles">
-          <button data-action="toggle-skip" class="chip ${skipped ? "selected warning" : ""}" ${!controls.skip_next ? "disabled" : ""}><ha-icon icon="mdi:skip-next"></ha-icon>${esc(t.skip)}</button>
-          ${attrs.schedule_source !== "schedule_entity" ? `<button data-action="toggle-holiday" class="chip ${holiday ? "selected holiday" : ""}" ${!controls.holiday_mode ? "disabled" : ""}><ha-icon icon="mdi:palm-tree"></ha-icon>${esc(t.holiday)}</button>` : ""}
-          ${mode === "advanced" ? `<button data-action="toggle-details" class="chip details-toggle"><ha-icon icon="mdi:chevron-${this._detailsOpen ? "up" : "down"}"></ha-icon>${esc(this._detailsOpen ? t.less : t.more)}</button>` : ""}
-        </div>
-        ${detailsMarkup}
-      </ha-card>${this._styles()}`;
+    if (card) {
+      const cardClass = `clock ${mode} state-${entity.state}`;
+      if (card.className !== cardClass) card.className = cardClass;
+      if (card.dataset.state !== entity.state) card.dataset.state = entity.state;
+    }
+    const status = this._node(".status-pill");
+    status?.classList.toggle("enabled", Boolean(enabled));
+    this._text("[data-brand]", t.brand);
+    this._text("[data-status]", statusText);
+    this._text("[data-title]", this._config.title || attrs.name || attrs.friendly_name || "Clock Advanced");
+    this._text("[data-time]", this._formatTime(target, lang));
+    this._text("[data-context]", `${dayLabel}${dayLabel ? " · " : ""}${dayKind}`);
+    this._hidden("[data-metrics]", !active);
+    this._text("[data-repeats]", `${attrs.repeat_count || 0} ${t.repeats}`);
+    this._text("[data-snoozes]", `${attrs.snooze_count || 0} ${t.snoozes}`);
+    this._text("[data-prepare-label]", t.prepare);
+    this._text("[data-alarm-label]", t.alarm);
+    const prepareProgress = this._node("[data-prepare-progress]");
+    const alarmProgress = this._node("[data-alarm-progress]");
+    const prepareWidth = `${progress.prepare}%`;
+    const alarmWidth = `${progress.alarm}%`;
+    if (prepareProgress && prepareProgress.style.width !== prepareWidth) prepareProgress.style.width = prepareWidth;
+    if (alarmProgress && alarmProgress.style.width !== alarmWidth) alarmProgress.style.width = alarmWidth;
+
+    const scheduleNode = this._node("[data-schedule]");
+    if (scheduleNode?.getAttribute("aria-label") !== t.schedule) scheduleNode?.setAttribute("aria-label", t.schedule);
+    this._hidden("[data-schedule]", mode !== "advanced" || !schedule.length);
+    for (let index = 0; index < 7; index += 1) {
+      const day = schedule[index] || {};
+      const dayNode = this._node(`[data-day="${index}"]`);
+      if (!dayNode) continue;
+      const dayClass = `day ${day.enabled ? "on" : "off"}`;
+      if (dayNode.className !== dayClass) dayNode.className = dayClass;
+      const dayParts = dayNode.querySelectorAll("span,strong");
+      const dayLabelText = t.days[index] || day.day || "";
+      const dayTimeText = day.enabled ? String(day.time || "").slice(0, 2) : "—";
+      if (dayParts[0] && dayParts[0].textContent !== dayLabelText) dayParts[0].textContent = dayLabelText;
+      if (dayParts[1] && dayParts[1].textContent !== dayTimeText) dayParts[1].textContent = dayTimeText;
+    }
+
+    this._hidden("[data-primary-actions]", !active);
+    const snoozeButton = this._node('[data-action="press-snooze"]');
+    const dismissButton = this._node('[data-action="press-dismiss"]');
+    const snoozeDisabled = !attrs.snooze_available || !controls.snooze;
+    const dismissDisabled = !controls.dismiss;
+    if (snoozeButton && snoozeButton.disabled !== snoozeDisabled) snoozeButton.disabled = snoozeDisabled;
+    if (dismissButton && dismissButton.disabled !== dismissDisabled) dismissButton.disabled = dismissDisabled;
+    this._text("[data-snooze-label]", t.snooze);
+    this._text("[data-dismiss-label]", t.dismiss);
+
+    const skipButton = this._node('[data-action="toggle-skip"]');
+    const holidayButton = this._node('[data-action="toggle-holiday"]');
+    const detailsButton = this._node('[data-action="toggle-details"]');
+    skipButton?.classList.toggle("selected", Boolean(skipped));
+    skipButton?.classList.toggle("warning", Boolean(skipped));
+    const skipDisabled = !controls.skip_next;
+    if (skipButton && skipButton.disabled !== skipDisabled) skipButton.disabled = skipDisabled;
+    holidayButton?.classList.toggle("selected", Boolean(holiday));
+    holidayButton?.classList.toggle("holiday", Boolean(holiday));
+    const holidayDisabled = !controls.holiday_mode;
+    if (holidayButton && holidayButton.disabled !== holidayDisabled) holidayButton.disabled = holidayDisabled;
+    this._hidden('[data-action="toggle-holiday"]', attrs.schedule_source === "schedule_entity");
+    this._hidden('[data-action="toggle-details"]', mode !== "advanced");
+    this._text("[data-skip-label]", t.skip);
+    this._text("[data-holiday-label]", t.holiday);
+    this._text("[data-details-label]", this._detailsOpen ? t.less : t.more);
+    const detailsIcon = this._node("[data-details-icon]");
+    const detailsIconValue = `mdi:chevron-${this._detailsOpen ? "up" : "down"}`;
+    if (detailsIcon?.getAttribute("icon") !== detailsIconValue) detailsIcon?.setAttribute("icon", detailsIconValue);
+
+    this._hidden("[data-details]", mode !== "advanced" || !this._detailsOpen);
+    this._text("[data-source-label]", t.source);
+    this._text("[data-source-value]", t[attrs.schedule_source] || t.weekly);
+    this._text("[data-workday-label]", t.workdayRule);
+    this._text("[data-workday-value]", `${this._guardLabel(guards.workday, lang)}${workdayState ? ` · ${workdayState === "on" ? t.workday : t.nonWorkday}` : ""}`);
+    this._text("[data-confirmation-label]", t.confirmation);
+    this._text("[data-confirmation-value]", this._guardLabel(guards.confirmation, lang));
+    this._hidden("[data-allow-row]", !guards.allow);
+    this._text("[data-allow-label]", t.allowedWhen);
+    this._text("[data-allow-value]", `${this._guardLabel(guards.allow, lang)} = ${settings.allow_state ?? "—"}`);
+    this._hidden("[data-block-row]", !guards.block);
+    this._text("[data-block-label]", t.blockedWhen);
+    this._text("[data-block-value]", `${this._guardLabel(guards.block, lang)} = ${settings.block_state ?? "—"}`);
+    this._hidden("[data-native-row]", !guards.native_conditions);
+    this._text("[data-native-label]", t.nativeConditions);
+    this._text("[data-native-value]", `${guards.native_conditions || 0} ${t.conditions}`);
+    this._text("[data-safety-label]", t.safety);
+    this._text("[data-safety-value]", `${t.after} ${settings.timeout_minutes ?? "—"} ${t.minutes}`);
+    this._text("[data-summary]", t.summary);
     this._updateCountdown();
   }
 
@@ -386,7 +521,7 @@ class ClockAdvancedCard extends HTMLElement {
     }
     if (action === "toggle-details") {
       this._detailsOpen = !this._detailsOpen;
-      this._render();
+      this._patch();
       return;
     }
     const map = {
@@ -409,6 +544,7 @@ class ClockAdvancedCard extends HTMLElement {
   _styles() {
     return `<style>
       :host { display:block; container-type:inline-size; --ca-accent:#93c5fd; --ca-warm:#f7ca78; }
+      [hidden] { display:none!important; }
       ha-card { box-sizing:border-box; width:100%; overflow:hidden; padding:15px; color:var(--primary-text-color); background:color-mix(in srgb,var(--card-background-color,#20262e) 80%,#283443 20%); border:1px solid color-mix(in srgb,var(--divider-color) 78%,#94a3b8 22%); border-radius:22px; box-shadow:var(--ha-card-box-shadow); }
       .state-ringing,.state-pre_alarm { --ca-accent:#fb923c; --ca-warm:#fb923c; }
       .state-snoozed { --ca-accent:#a78bfa; --ca-warm:#a78bfa; }
@@ -510,6 +646,7 @@ class ClockAdvancedBadge extends HTMLElement {
     this._config = {};
     this._hass = null;
     this._lastRenderSignature = "";
+    this._structureReady = false;
   }
 
   static getConfigElement() {
@@ -528,7 +665,8 @@ class ClockAdvancedBadge extends HTMLElement {
     }
     this._config = { language: "auto", ...config };
     this._lastRenderSignature = "";
-    this._render();
+    this._ensureStructure();
+    this._patch();
   }
 
   set hass(value) {
@@ -538,8 +676,9 @@ class ClockAdvancedBadge extends HTMLElement {
     let signature;
     try {
       signature = JSON.stringify([
-        this._config,
-        value?.language || "en",
+        this._config.entity,
+        this._config.title,
+        this._lang(),
         entity?.state,
         attrs.name,
         attrs.friendly_name,
@@ -552,7 +691,7 @@ class ClockAdvancedBadge extends HTMLElement {
     }
     if (signature === this._lastRenderSignature) return;
     this._lastRenderSignature = signature;
-    this._render();
+    this._patch();
   }
 
   _openMoreInfo() {
@@ -567,7 +706,8 @@ class ClockAdvancedBadge extends HTMLElement {
 
   _bindInteraction() {
     const badge = this.shadowRoot?.querySelector?.("ha-badge");
-    if (!badge || !this._config.entity) return;
+    if (!badge || this._interactionBound) return;
+    this._interactionBound = true;
     badge.addEventListener?.("click", (event) => {
       event.stopPropagation?.();
       this._openMoreInfo();
@@ -656,48 +796,61 @@ class ClockAdvancedBadge extends HTMLElement {
     return { mode, status, timing };
   }
 
+  _ensureStructure() {
+    if (!this.shadowRoot || this._structureReady) return;
+    this.shadowRoot.innerHTML = `<style>
+        :host{display:block;width:var(--ha-badge-size,36px);height:var(--ha-badge-size,36px)}
+        ha-badge{--badge-color:var(--primary-color,#03a9f4)}
+        .badge-symbol{position:relative;display:grid;place-items:center;width:22px;height:22px;color:var(--badge-color)}
+        .clock-symbol{--mdc-icon-size:20px}
+        .state-marker{position:absolute;right:-4px;bottom:-4px;display:grid;place-items:center;width:12px;height:12px;border-radius:50%;background:var(--ha-card-background,var(--card-background-color,#fff));box-shadow:0 0 0 1px var(--ha-card-border-color,var(--divider-color,#ddd));color:var(--badge-color)}
+        .state-marker ha-icon{--mdc-icon-size:9px}
+      </style>
+      <ha-badge type="button" icon-only data-mode="unavailable">
+        <span slot="icon" class="badge-symbol">
+          <ha-icon class="clock-symbol" icon="mdi:alarm"></ha-icon>
+          <span class="state-marker"><ha-icon data-state-icon icon="mdi:alert-circle-outline"></ha-icon></span>
+        </span>
+      </ha-badge>`;
+    this._structureReady = true;
+    this._bindInteraction();
+  }
+
   _render() {
+    this._ensureStructure();
+    this._patch();
+  }
+
+  _patch() {
     if (!this.shadowRoot || !this._config) return;
+    this._ensureStructure();
     const entity = this._hass?.states?.[this._config.entity];
     const lang = this._lang();
     const t = TEXT[lang];
-    if (!entity) {
-      this.shadowRoot.innerHTML = `<style>
-        :host{display:block;width:var(--ha-badge-size,36px);height:var(--ha-badge-size,36px)}
-        ha-badge{--badge-color:${esc(this._color("unavailable"))}}
-        .badge-symbol{position:relative;display:grid;place-items:center;width:22px;height:22px;color:var(--badge-color)}
-        .clock-symbol{--mdc-icon-size:20px}
-        .state-marker{position:absolute;right:-4px;bottom:-4px;display:grid;place-items:center;width:12px;height:12px;border-radius:50%;background:var(--ha-card-background,var(--card-background-color,#fff));box-shadow:0 0 0 1px var(--ha-card-border-color,var(--divider-color,#ddd));color:var(--badge-color)}
-        .state-marker ha-icon{--mdc-icon-size:9px}
-      </style>
-      <ha-badge icon-only data-mode="unavailable" title="${esc(t.unavailable)}" aria-label="${esc(t.unavailable)}">
-        <span slot="icon" class="badge-symbol">
-          <ha-icon class="clock-symbol" icon="mdi:alarm"></ha-icon>
-          <span class="state-marker"><ha-icon icon="mdi:alert-circle-outline"></ha-icon></span>
-        </span>
-      </ha-badge>`;
-      return;
+    const badge = this.shadowRoot.querySelector("ha-badge");
+    const mode = entity?.state || "unavailable";
+    const marker = this.shadowRoot.querySelector("[data-state-icon]");
+    const details = entity ? this._statusDetails(entity, lang) : null;
+    const tooltip = entity
+      ? [
+        this._config.title || entity.attributes?.name || entity.attributes?.friendly_name || "Clock Advanced",
+        details.status,
+        details.timing,
+      ].filter(Boolean).join(" · ")
+      : t.unavailable;
+    if (badge) {
+      const color = this._color(mode);
+      if (badge.dataset.mode !== mode) badge.dataset.mode = mode;
+      if (badge.style.getPropertyValue("--badge-color") !== color) {
+        badge.style.setProperty("--badge-color", color);
+      }
+      if (badge.getAttribute("title") !== tooltip) badge.setAttribute("title", tooltip);
+      if (badge.getAttribute("aria-label") !== tooltip) badge.setAttribute("aria-label", tooltip);
     }
-    const attrs = entity.attributes || {};
-    const details = this._statusDetails(entity, lang);
-    const title = this._config.title || attrs.name || entity.attributes.friendly_name || "Clock Advanced";
-    const tooltip = [title, details.status, details.timing].filter(Boolean).join(" · ");
-    this.shadowRoot.innerHTML = `<style>
-        :host{display:block;width:var(--ha-badge-size,36px);height:var(--ha-badge-size,36px)}
-        ha-badge{--badge-color:${esc(this._color(details.mode))}}
-        .badge-symbol{position:relative;display:grid;place-items:center;width:22px;height:22px;color:var(--badge-color)}
-        .clock-symbol{--mdc-icon-size:20px}
-        .state-marker{position:absolute;right:-4px;bottom:-4px;display:grid;place-items:center;width:12px;height:12px;border-radius:50%;background:var(--ha-card-background,var(--card-background-color,#fff));box-shadow:0 0 0 1px var(--ha-card-border-color,var(--divider-color,#ddd));color:var(--badge-color)}
-        .state-marker ha-icon{--mdc-icon-size:9px}
-      </style>
-      <ha-badge type="button" icon-only data-mode="${esc(details.mode)}" title="${esc(tooltip)}" aria-label="${esc(tooltip)}">
-        <span slot="icon" class="badge-symbol">
-          <ha-icon class="clock-symbol" icon="mdi:alarm"></ha-icon>
-          <span class="state-marker"><ha-icon icon="${esc(this._stateIcon(details.mode))}"></ha-icon></span>
-        </span>
-      </ha-badge>`;
-    this._bindInteraction();
+    const markerIcon = this._stateIcon(mode);
+    if (marker?.getAttribute("icon") !== markerIcon) marker?.setAttribute("icon", markerIcon);
   }
+
 }
 
 class ClockAdvancedBadgeEditor extends HTMLElement {

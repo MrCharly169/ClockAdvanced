@@ -14,6 +14,7 @@ class PackageTests(unittest.TestCase):
         hacs = json.loads((ROOT / "hacs.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["domain"], "clock_advanced")
         self.assertTrue(manifest["version"].startswith("2026.8."))
+        self.assertEqual(manifest["integration_type"], "hub")
         self.assertEqual(hacs["homeassistant"], "2026.8.0")
         self.assertTrue(hacs["hide_default_branch"])
 
@@ -70,12 +71,32 @@ class PackageTests(unittest.TestCase):
         self.assertIn("<ha-badge", frontend)
         self.assertIn('class="clock-symbol" icon="mdi:alarm"', frontend)
         self.assertIn('class="state-marker"', frontend)
-        self.assertIn('data-mode="${esc(details.mode)}"', frontend)
+        self.assertIn("badge.dataset.mode = mode", frontend)
         self.assertIn("_lastRenderSignature", frontend)
         self.assertIn('new CustomEvent("hass-more-info"', frontend)
         self.assertIn('mode: "easy"', frontend)
         self.assertIn("mode: storage", dev_config)
         self.assertNotIn("mode: yaml", dev_config)
+
+    def test_card_and_badge_use_stable_runtime_dom(self) -> None:
+        frontend = (COMPONENT / "frontend" / "clock-advanced-card.js").read_text(
+            encoding="utf-8"
+        )
+        card = frontend.split("class ClockAdvancedCard extends", 1)[1].split(
+            "class ClockAdvancedCardEditor extends", 1
+        )[0]
+        badge = frontend.split("class ClockAdvancedBadge extends", 1)[1].split(
+            "class ClockAdvancedBadgeEditor extends", 1
+        )[0]
+        self.assertEqual(card.count("shadowRoot.innerHTML"), 1)
+        self.assertEqual(badge.count("shadowRoot.innerHTML"), 1)
+        self.assertIn("_ensureStructure()", card)
+        self.assertIn("_patch()", card)
+        self.assertIn("_ensureStructure()", badge)
+        self.assertIn("_patch()", badge)
+        for forbidden in ("scrollIntoView", "scrollTo(", "window.scroll", ".focus("):
+            self.assertNotIn(forbidden, card)
+            self.assertNotIn(forbidden, badge)
 
     def test_localizations_have_matching_top_level_surfaces(self) -> None:
         en = json.loads((COMPONENT / "translations" / "en.json").read_text(encoding="utf-8"))
@@ -98,6 +119,15 @@ class PackageTests(unittest.TestCase):
         self.assertIn("async_validate_conditions_config", runtime)
         self.assertIn("CONF_ESCALATE_AFTER_SNOOZES", runtime)
         self.assertIn("CONF_START_CONDITIONS", diagnostics)
+
+    def test_setup_wizard_and_sectioned_options_are_shipped(self) -> None:
+        config_flow = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
+        self.assertIn("class ClockAdvancedConfigFlow", config_flow)
+        self.assertIn("class ClockAdvancedOptionsFlow", config_flow)
+        self.assertIn("OptionsFlowWithReload", config_flow)
+        self.assertIn("async_show_menu", config_flow)
+        self.assertIn("CONF_NAME, CONF_SCHEDULE_SOURCE", config_flow)
+        self.assertIn("async_update_entry", config_flow)
 
 
 if __name__ == "__main__":

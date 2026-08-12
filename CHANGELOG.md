@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 2026.8.1b1 - 2026-08-12
+
+- Reclassified Clock Advanced as a normal Home Assistant hub integration so it is managed under Devices & services instead of being presented as a Helper.
+- Kept the guided seven-step setup wizard and expanded the sectioned options flow so the integration name and alarm source can also be changed later.
+- Renamed the optional `schedule.*` source in the UI to distinguish Home Assistant's native schedule entity from Clock Advanced itself.
+- Replaced runtime `shadowRoot.innerHTML` rebuilds with one-time Card and Badge structures plus targeted text, class, attribute, visibility, disabled-state, and progress patches.
+- Preserved `ha-card`, `ha-badge`, button, focus, and expanded-details identity across status, control, guard, and countdown updates.
+- Added simulated and live scroll regressions covering irrelevant assignments, second-by-second countdown changes, rapid guard/control updates, vacation/idle/pre-alarm/ringing/snoozed states, and a real Schedule-entity ringing/snoozed lifecycle.
+- Added a scrollable Home Assistant `Render stability` lab view using the permanent `/clock_advanced/clock-advanced-card.js` resource without a cache-busting query parameter.
+
 ## 2026.8.1b0 - 2026-08-12
 
 - Stopped Card rerenders caused only by Home Assistant's `last_updated` timestamp; the Card now rebuilds its DOM only when visible data actually changes.

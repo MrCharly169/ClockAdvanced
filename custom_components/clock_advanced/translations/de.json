@@ -9,13 +9,13 @@
       },
       "source": {
         "title": "Weckzeit-Quelle auswählen",
-        "description": "Schritt 2 von 7 · Verwende exakte Weckzeiten von Clock Advanced oder starte beim Wechsel eines Home-Assistant-Zeitplan-Helfers von Aus zu Ein.",
+        "description": "Schritt 2 von 7 · Verwende exakte Weckzeiten von Clock Advanced oder starte beim Wechsel einer nativen Home-Assistant-Zeitplan-Entität von Aus zu Ein.",
         "data": { "schedule_source": "Weckzeit-Quelle" }
       },
       "helper_schedule": {
-        "title": "Zeitplan-Helfer auswählen",
-        "description": "Schritt 3 von 7 · Der Wecker startet am Beginn jedes aktiven Zeitblocks. Den Helfer erstellst oder bearbeitest du unter Einstellungen → Geräte & Dienste → Helfer.",
-        "data": { "schedule_entity": "Zeitplan-Helfer" }
+        "title": "Home-Assistant-Zeitplan auswählen",
+        "description": "Schritt 3 von 7 · Der Wecker startet am Beginn jedes aktiven Zeitblocks der ausgewählten nativen Zeitplan-Entität.",
+        "data": { "schedule_entity": "Zeitplan-Entität" }
       },
       "schedule": {
         "title": "Wochenplan",
@@ -88,7 +88,7 @@
       }
     },
     "error": {
-      "schedule_required": "Wähle für diese Quelle einen Zeitplan-Helfer aus.",
+      "schedule_required": "Wähle für diese Quelle eine Zeitplan-Entität aus.",
       "confirmation_required": "Bestätige die Zusammenfassung, bevor dieser Wecker angelegt wird."
     }
   },
@@ -96,16 +96,16 @@
     "step": {
       "init": {
         "title": "Clock-Advanced-Einstellungen",
-        "description": "Öffne einen Bereich. Nach dem Speichern wird nur dieser Wecker neu geladen.",
+        "description": "Alle Einstellungen dieser Integration sind hier nach Bereichen gegliedert. Beim Speichern wird nur dieser Wecker neu geladen.",
         "menu_options": {
-          "source": "Weckzeit-Quelle", "schedule": "Wochenplan", "behavior": "Weckablauf",
-          "guards": "Optionale Bedingungen", "actions": "Aktionsphasen"
+          "source": "Allgemein & Zeitquelle", "schedule": "Interner Wochenplan", "behavior": "Weckablauf & Eskalation",
+          "guards": "Bedingungen & Bestätigung", "actions": "Aktionen & Medien"
         }
       },
       "source": {
-        "title": "Weckzeit-Quelle",
-        "description": "Wähle den internen Wochenplan oder einen Home-Assistant-Zeitplan-Helfer. Für die Helfer-Quelle muss ein Zeitplan ausgewählt sein.",
-        "data": { "schedule_source": "Weckzeit-Quelle", "schedule_entity": "Zeitplan-Helfer" }
+        "title": "Allgemein & Zeitquelle",
+        "description": "Ändere den Namen und wähle entweder den integrierten Wochenplan oder eine vorhandene native Home-Assistant-Zeitplan-Entität.",
+        "data": { "name": "Name", "schedule_source": "Weckzeit-Quelle", "schedule_entity": "Zeitplan-Entität (optional)" }
       },
       "schedule": {
         "title": "Wochenplan",
@@ -149,7 +149,7 @@
         }
       }
     },
-    "error": { "schedule_required": "Wähle für diese Quelle einen Zeitplan-Helfer aus." }
+    "error": { "schedule_required": "Wähle für diese Quelle eine Zeitplan-Entität aus." }
   },
   "entity": {
     "binary_sensor": { "alarm_active": { "name": "Weckvorgang aktiv" } },
@@ -169,6 +169,6 @@
     }
   },
   "selector": {
-    "schedule_source": { "options": { "weekly": "Clock-Advanced-Wochenplan", "schedule_entity": "Home-Assistant-Zeitplan-Helfer" } }
+    "schedule_source": { "options": { "weekly": "Clock-Advanced-Wochenplan", "schedule_entity": "Home-Assistant-Zeitplan-Entität" } }
   }
 }

@@ -95,7 +95,10 @@ def _helper_schedule_schema() -> vol.Schema:
 
 
 def _source_options_schema() -> vol.Schema:
-    fields = dict(_source_schema().schema)
+    fields: dict[Any, Any] = {
+        vol.Required(CONF_NAME, default=DEFAULT_NAME): selector.TextSelector()
+    }
+    fields.update(_source_schema().schema)
     fields[vol.Optional(CONF_SCHEDULE_ENTITY)] = selector.EntitySelector(
         selector.EntitySelectorConfig(domain="schedule")
     )
@@ -317,7 +320,7 @@ class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class ClockAdvancedOptionsFlow(config_entries.OptionsFlowWithReload):
-    """Edit one configuration section at a time."""
+    """Edit one integration section at a time and reload the entry."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -335,6 +338,12 @@ class ClockAdvancedOptionsFlow(config_entries.OptionsFlowWithReload):
         return self.add_suggested_values_to_schema(schema, self._current)
 
     def _save(self, values: dict[str, Any], clear: tuple[str, ...] = ()):
+        if CONF_NAME in values:
+            title = str(values[CONF_NAME]).strip() or DEFAULT_NAME
+            values = {**values, CONF_NAME: title}
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, title=title
+            )
         data = dict(self.config_entry.options)
         for key in clear:
             data.pop(key, None)
@@ -342,7 +351,7 @@ class ClockAdvancedOptionsFlow(config_entries.OptionsFlowWithReload):
         return self.async_create_entry(data=data)
 
     async def async_step_source(self, user_input=None):
-        keys = (CONF_SCHEDULE_SOURCE, CONF_SCHEDULE_ENTITY)
+        keys = (CONF_NAME, CONF_SCHEDULE_SOURCE, CONF_SCHEDULE_ENTITY)
         if user_input is not None:
             if (
                 user_input.get(CONF_SCHEDULE_SOURCE) == SCHEDULE_SOURCE_ENTITY

@@ -114,6 +114,59 @@
           ]
         }
       ]
+    },
+    {
+      "title": "Render stability",
+      "path": "render-stability",
+      "icon": "mdi:motion-pause-outline",
+      "type": "sections",
+      "max_columns": 1,
+      "badges": [
+        {
+          "type": "custom:clock-advanced-badge",
+          "entity": "sensor.schedule_helper_lab_status",
+          "language": "de"
+        }
+      ],
+      "sections": [
+        {
+          "type": "grid",
+          "cards": [
+            { "type": "heading", "heading": "DOM- und Scroll-Stabilität", "icon": "mdi:motion-pause-outline" },
+            {
+              "type": "custom:clock-advanced-card",
+              "entity": "sensor.schedule_helper_lab_status",
+              "mode": "advanced",
+              "language": "de"
+            },
+            {
+              "type": "entities",
+              "title": "Schnelle Control- und Guard-Updates",
+              "entities": [
+                "input_boolean.vacation_mode",
+                "input_boolean.allow_alarm",
+                "input_boolean.quiet_mode",
+                "input_boolean.wake_confirmation",
+                "switch.clock_advanced_lab_skip_next_alarm",
+                "switch.clock_advanced_lab_holiday_mode"
+              ]
+            },
+            {
+              "type": "entities",
+              "title": "Alarmbedienung",
+              "entities": [
+                "sensor.schedule_helper_lab_status",
+                "button.schedule_helper_lab_snooze",
+                "button.schedule_helper_lab_dismiss_alarm"
+              ]
+            },
+            {
+              "type": "markdown",
+              "content": "Diese absichtlich hohe Ansicht hält Card und Badge gemeinsam in einem scrollbaren Home-Assistant-Dashboard. Sie dient der Prüfung von scrollTop, Fokus, Countdown und stabiler DOM-Identität."
+            }
+          ]
+        }
+      ]
     }
   ]
 }
