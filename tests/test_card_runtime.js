@@ -126,6 +126,10 @@ global.document = {
   if (!["click", "input", "change"].every((type) => instance.shadowRoot.listeners.has(type))) throw new Error("Stable Shadow Root event delegation is incomplete");
   const cardRenderCount = instance.shadowRoot.writeCount;
   const cardRoot = instance.shadowRoot.querySelector("ha-card");
+  const animatedLogo = instance.shadowRoot.querySelector("[data-logo]");
+  if (!source.includes("ca-logo-ring") || !source.includes("prefers-reduced-motion:reduce")) {
+    throw new Error("The state-aware accessible logo animation is missing");
+  }
   const focusedControl = instance.shadowRoot.querySelector('[data-action="toggle-details"]');
   const scrollContainer = { scrollTop: 240 };
   let cardPatchCount = 0;
@@ -169,6 +173,7 @@ global.document = {
     };
     instance.hass = { ...hass, states: { ...hass.states, "sensor.clock_status": { state, attributes: attrs } } };
     if (instance.shadowRoot.querySelector("ha-card") !== cardRoot) throw new Error(`Card root changed in ${state}`);
+    if (instance.shadowRoot.querySelector("[data-logo]") !== animatedLogo) throw new Error(`Card logo changed in ${state}`);
     if (instance.shadowRoot.writeCount !== cardRenderCount) throw new Error(`Card rebuilt its DOM in ${state}`);
     if (document.activeElement !== focusedControl) throw new Error(`Card lost focus in ${state}`);
     if (scrollContainer.scrollTop !== 240) throw new Error(`Dashboard scroll changed in ${state}`);

@@ -317,7 +317,16 @@ class ClockAdvancedCard extends HTMLElement {
       <ha-card class="clock">
         <div class="missing" data-missing hidden><span data-unavailable></span><small data-missing-entity></small></div>
         <div class="card-body" data-card-body hidden>
-          <header><span class="brand" data-brand></span><button class="status-pill" data-action="more-info"><i></i><span data-status></span></button></header>
+          <header>
+            <span class="brand-lockup">
+              <span class="brand-logo" data-logo aria-hidden="true">
+                <span class="logo-orbit"></span>
+                <ha-icon class="logo-icon" icon="mdi:alarm"></ha-icon>
+              </span>
+              <span class="brand" data-brand></span>
+            </span>
+            <button class="status-pill" data-action="more-info"><i></i><span data-status></span></button>
+          </header>
           <h2 data-title></h2>
           <main>
             <div class="time" data-time></div>
@@ -705,11 +714,37 @@ class ClockAdvancedCard extends HTMLElement {
       .state-vacation { --ca-accent:#5eead4; --ca-warm:#5eead4; }
       .state-blocked { --ca-accent:#fbbf24; --ca-warm:#fbbf24; }
       .state-disabled { --ca-accent:#94a3b8; --ca-warm:#94a3b8; }
-      header,.toggles,.primary-actions,.context,.progress-row { display:flex; align-items:center; }
+      header,.brand-lockup,.toggles,.primary-actions,.context,.progress-row { display:flex; align-items:center; }
       header { justify-content:space-between; gap:10px; }
+      .brand-lockup { min-width:0; gap:9px; }
+      .brand-logo { position:relative; display:grid; place-items:center; flex:0 0 30px; width:30px; height:30px; color:var(--ca-accent); border-radius:50%; background:color-mix(in srgb,var(--ca-accent) 12%,var(--card-background-color)); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ca-accent) 28%,transparent); transition:color .35s ease,background-color .35s ease,box-shadow .35s ease,opacity .35s ease; transform-origin:50% 55%; }
+      .logo-icon { --mdc-icon-size:19px; position:relative; z-index:2; filter:drop-shadow(0 0 5px color-mix(in srgb,var(--ca-accent) 40%,transparent)); }
+      .logo-orbit { position:absolute; inset:3px; z-index:1; border:1px solid color-mix(in srgb,var(--ca-accent) 58%,transparent); border-radius:50%; opacity:.42; }
+      .brand-logo::before,.brand-logo::after { content:""; position:absolute; pointer-events:none; border-radius:50%; }
+      .brand-logo::before { inset:-3px; border:1px solid color-mix(in srgb,var(--ca-accent) 36%,transparent); opacity:0; }
+      .brand-logo::after { inset:8px; z-index:0; background:color-mix(in srgb,var(--ca-accent) 28%,transparent); filter:blur(4px); opacity:.35; }
       .brand { color:var(--secondary-text-color); font-size:.7rem; font-weight:800; letter-spacing:.13em; }
       .status-pill { display:flex; align-items:center; gap:7px; border:0; border-radius:999px; padding:8px 12px; background:color-mix(in srgb,var(--secondary-background-color) 86%,#94a3b8 14%); color:var(--primary-text-color); font-size:.72rem; font-weight:750; }
       .status-pill i { width:7px; height:7px; border-radius:50%; background:var(--ca-accent); }
+      .state-scheduled .brand-logo::before { animation:ca-logo-pulse 3.2s ease-out infinite; }
+      .state-pre_alarm .brand-logo { animation:ca-logo-rise 2.2s ease-in-out infinite; }
+      .state-pre_alarm .brand-logo::before { animation:ca-logo-pulse 1.8s ease-out infinite; }
+      .state-ringing .brand-logo { animation:ca-logo-ring .58s ease-in-out infinite; background:color-mix(in srgb,var(--ca-accent) 22%,var(--card-background-color)); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ca-accent) 52%,transparent),0 0 16px color-mix(in srgb,var(--ca-accent) 25%,transparent); }
+      .state-ringing .brand-logo::before { animation:ca-logo-pulse .9s ease-out infinite; }
+      .state-snoozed .brand-logo { animation:ca-logo-sleep 3.4s ease-in-out infinite; }
+      .state-vacation .brand-logo { animation:ca-logo-vacation 5.5s ease-in-out infinite; }
+      .state-dismissed .brand-logo { animation:ca-logo-confirm .7s ease-out 1; }
+      .state-skipped .brand-logo { animation:ca-logo-skip .65s ease-out 1; }
+      .state-timeout .brand-logo,.state-error .brand-logo { animation:ca-logo-alert 1.25s ease-in-out infinite; }
+      .state-disabled .brand-logo,.state-idle .brand-logo { opacity:.72; }
+      @keyframes ca-logo-pulse { 0% { transform:scale(.72); opacity:.6; } 70%,100% { transform:scale(1.28); opacity:0; } }
+      @keyframes ca-logo-rise { 0%,100% { transform:translateY(1px); } 50% { transform:translateY(-2px); } }
+      @keyframes ca-logo-ring { 0%,100% { transform:rotate(0); } 20% { transform:rotate(-10deg); } 40% { transform:rotate(8deg); } 60% { transform:rotate(-6deg); } 80% { transform:rotate(4deg); } }
+      @keyframes ca-logo-sleep { 0%,100% { transform:scale(.94); opacity:.72; } 50% { transform:scale(1.03); opacity:1; } }
+      @keyframes ca-logo-vacation { 0%,100% { transform:rotate(-2deg) translateY(0); } 50% { transform:rotate(3deg) translateY(-1px); } }
+      @keyframes ca-logo-confirm { 0% { transform:scale(.75) rotate(-12deg); } 62% { transform:scale(1.13) rotate(5deg); } 100% { transform:scale(1) rotate(0); } }
+      @keyframes ca-logo-skip { 0% { transform:translateX(-4px); opacity:.35; } 55% { transform:translateX(3px); opacity:1; } 100% { transform:translateX(0); } }
+      @keyframes ca-logo-alert { 0%,100% { box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ca-accent) 45%,transparent),0 0 0 transparent; } 50% { box-shadow:inset 0 0 0 1px var(--ca-accent),0 0 15px color-mix(in srgb,var(--ca-accent) 34%,transparent); } }
       h2 { margin:3px 0 0; font-size:.76rem; font-weight:760; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
       button { box-sizing:border-box; font:inherit; color:inherit; cursor:pointer; }
       button:disabled { opacity:.42; cursor:not-allowed; }
@@ -759,7 +794,7 @@ class ClockAdvancedCard extends HTMLElement {
       .compact .progress-panel,.compact .schedule,.compact .toggles,.compact .details { display:none; }
       .compact main { padding-bottom:4px; }
       .easy .schedule,.easy .details { display:none; }
-      @container (max-width:300px) { ha-card { padding:13px; border-radius:19px; } .time { font-size:2.45rem; } .brand { font-size:.62rem; } .status-pill { padding:7px 9px; } .context { align-items:flex-start; flex-direction:column; } .countdown { flex-basis:auto; min-width:0; text-align:left; } }
+      @container (max-width:300px) { ha-card { padding:13px; border-radius:19px; } .brand-lockup { gap:7px; } .brand-logo { flex-basis:27px; width:27px; height:27px; } .logo-icon { --mdc-icon-size:17px; } .time { font-size:2.45rem; } .brand { font-size:.62rem; } .status-pill { padding:7px 9px; } .context { align-items:flex-start; flex-direction:column; } .countdown { flex-basis:auto; min-width:0; text-align:left; } }
       @media (prefers-reduced-motion:reduce) { * { animation:none!important; transition:none!important; } }
     </style>`;
   }
