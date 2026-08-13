@@ -122,7 +122,7 @@ global.document = {
   if (instance.getCardSize() !== 7 || instance.getGridOptions().columns !== 12 || instance.getGridOptions().rows !== 7) throw new Error("Sizing API is invalid");
   instance.setConfig({ ...stub, mode: "advanced" });
   instance.hass = hass;
-  if (instance.getCardSize() !== 18 || instance.getGridOptions().rows !== 18 || instance.getGridOptions().min_rows !== 16) throw new Error("Advanced sizing does not reserve its rendered height");
+  if (instance.getCardSize() !== 14 || instance.getGridOptions().rows !== 14 || instance.getGridOptions().min_rows !== 12) throw new Error("Advanced sizing does not match the cleaner rendered height");
   if (!["click", "input", "change"].every((type) => instance.shadowRoot.listeners.has(type))) throw new Error("Stable Shadow Root event delegation is incomplete");
   const cardRenderCount = instance.shadowRoot.writeCount;
   const cardRoot = instance.shadowRoot.querySelector("ha-card");
@@ -131,6 +131,11 @@ global.document = {
     throw new Error("The state-aware accessible logo animation is missing");
   }
   const focusedControl = instance.shadowRoot.querySelector('[data-action="toggle-details"]');
+  const controlMenu = instance.shadowRoot.querySelector("[data-control-menu]");
+  if (!controlMenu.hidden || instance._detailsOpen) throw new Error("Card options are not closed by default");
+  await instance._onClick({ target: focusedControl });
+  if (controlMenu.hidden || !instance._detailsOpen) throw new Error("Card options submenu did not open");
+  if (instance.shadowRoot.querySelector("ha-card") !== cardRoot) throw new Error("Opening options rebuilt the Card root");
   const scrollContainer = { scrollTop: 240 };
   let cardPatchCount = 0;
   const originalCardPatch = instance._patch.bind(instance);
@@ -144,6 +149,7 @@ global.document = {
   if (cardPatchCount !== 0) throw new Error("Card patched for an invisible last_updated-only change");
   if (instance.shadowRoot.querySelector("ha-card") !== cardRoot) throw new Error("Card root identity changed for an irrelevant update");
   if (document.activeElement !== focusedControl) throw new Error("Card lost focus for an irrelevant update");
+  if (controlMenu.hidden || !instance._detailsOpen) throw new Error("Card closed the options submenu during an update");
   const timeBefore = instance.shadowRoot.querySelector("[data-time]").textContent;
   instance.hass = { ...hass, states: { ...hass.states, "sensor.clock_status": {
     ...hass.states["sensor.clock_status"], attributes: {
@@ -211,6 +217,8 @@ global.document = {
   if (instance.shadowRoot.querySelector("ha-card") !== cardRoot || instance.shadowRoot.writeCount !== cardRenderCount) throw new Error("Rapid control and guard updates rebuilt the Card");
   if (document.activeElement !== focusedControl || document.focusCalls !== focusCallsAfterUserAction) throw new Error("Card moved focus without user interaction");
   if (scrollContainer.scrollTop !== 240 || document.scrollCalls !== 0) throw new Error("Card invoked scrolling during updates");
+  await instance._onClick({ target: focusedControl });
+  if (!controlMenu.hidden || instance._detailsOpen) throw new Error("Card options submenu did not close");
 
   const weeklySchedule = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
     .map((day) => ({ day, enabled: true, time: "06:00:00" }));

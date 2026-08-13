@@ -129,6 +129,8 @@ The Card header includes a fixed-size animated alarm-clock logo whose motion fol
 
 Advanced mode also edits the built-in weekly schedule directly: select a weekday, drag the five-minute time slider, refine the value in the time field, and enable or disable that day. Saving calls the integration's own schedule service and recalculates without an integration reload. The bottom Vacation button controls the integration-owned Vacation mode by default; when an external vacation entity was explicitly configured, the same button controls that shared entity instead.
 
+Easy and Advanced keep their everyday surface intentionally clean. Skip next, Holiday time, Vacation, and the technical condition summary are available through the closed-by-default **Options** submenu. Advanced still keeps weekday selection and time editing directly visible. The submenu overlays the Card without changing its height and shows a small counter whenever an exceptional option is active.
+
 ## Entities / Entitäten
 
 Every clock creates:

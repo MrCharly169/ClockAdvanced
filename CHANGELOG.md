@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 2026.8.1b5 - 2026-08-13
+
+- Cleaned up the default Card surface while preserving direct weekday selection, the five-minute slider, exact time input, and day enable control in Advanced mode.
+- Moved Skip next, Holiday time, Vacation, and technical condition details into a closed-by-default **Options** submenu for Easy and Advanced Cards.
+- Added a compact active-option counter so exceptional states remain visible without exposing every control permanently.
+- Implemented the submenu as an internally scrollable overlay that preserves Card height, DOM identity, focus, open state, and dashboard scroll position during Home Assistant updates.
+- Reduced the Advanced Sections grid reservation to match the cleaner closed layout while keeping Compact and existing YAML configurations compatible.
+
 ## 2026.8.1b4 - 2026-08-13
 
 - Added a compact animated alarm-clock logo to the Card header with distinct motion for scheduled, pre-alarm, ringing, snoozed, vacation, dismissed, skipped, timeout, and error states.

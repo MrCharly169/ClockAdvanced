@@ -66,8 +66,9 @@ const TEXT = {
     notConfigured: "Not configured",
     after: "after",
     minutes: "minutes",
-    more: "More",
-    less: "Less",
+    options: "Options",
+    closeOptions: "Close",
+    activeOptions: "active",
     summary: "The next alarm is active and recalculated automatically.",
     days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
   },
@@ -132,8 +133,9 @@ const TEXT = {
     notConfigured: "Nicht konfiguriert",
     after: "nach",
     minutes: "Minuten",
-    more: "Mehr",
-    less: "Weniger",
+    options: "Optionen",
+    closeOptions: "Schließen",
+    activeOptions: "aktiv",
     summary: "Der nächste Wecker ist aktiv und wird automatisch berechnet.",
     days: ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"],
   },
@@ -147,7 +149,7 @@ class ClockAdvancedCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._detailsOpen = true;
+    this._detailsOpen = false;
     this._selectedDay = 0;
     this._scheduleDraft = null;
     this._onClick = this._onClick.bind(this);
@@ -246,15 +248,15 @@ class ClockAdvancedCard extends HTMLElement {
 
   getCardSize() {
     const mode = this._mode();
-    return mode === "compact" ? 4 : mode === "easy" ? 7 : 18;
+    return mode === "compact" ? 4 : mode === "easy" ? 7 : 14;
   }
 
   getGridOptions() {
     const mode = this._mode();
     return {
-      rows: mode === "compact" ? 4 : mode === "easy" ? 7 : 18,
+      rows: mode === "compact" ? 4 : mode === "easy" ? 7 : 14,
       columns: mode === "compact" ? 6 : 12,
-      min_rows: mode === "compact" ? 4 : mode === "easy" ? 7 : 16,
+      min_rows: mode === "compact" ? 4 : mode === "easy" ? 7 : 12,
       min_columns: mode === "compact" ? 4 : 6,
     };
   }
@@ -355,22 +357,31 @@ class ClockAdvancedCard extends HTMLElement {
             <button class="primary snooze" data-action="press-snooze"><ha-icon icon="mdi:alarm-snooze"></ha-icon><span data-snooze-label></span></button>
             <button class="primary dismiss" data-action="press-dismiss"><ha-icon icon="mdi:alarm-off"></ha-icon><span data-dismiss-label></span></button>
           </div>
-          <div class="toggles">
-            <button data-action="toggle-skip" class="chip"><ha-icon icon="mdi:skip-next"></ha-icon><span data-skip-label></span></button>
-            <button data-action="toggle-holiday" class="chip"><ha-icon icon="mdi:palm-tree"></ha-icon><span data-holiday-label></span></button>
-            <button data-action="toggle-vacation" class="chip vacation"><ha-icon icon="mdi:airplane"></ha-icon><span data-vacation-label></span></button>
-            <button data-action="toggle-details" class="chip details-toggle"><ha-icon data-details-icon icon="mdi:chevron-up"></ha-icon><span data-details-label></span></button>
+          <div class="menu-shell" data-menu-shell>
+            <button data-action="toggle-details" class="chip menu-trigger" aria-expanded="false" aria-controls="clock-advanced-options">
+              <ha-icon data-details-icon icon="mdi:tune-variant"></ha-icon>
+              <span data-details-label></span>
+              <small data-options-count hidden></small>
+            </button>
+            <section id="clock-advanced-options" class="control-menu" data-control-menu hidden>
+              <div class="menu-heading"><strong data-options-heading></strong><span data-options-summary></span></div>
+              <div class="toggles">
+                <button data-action="toggle-skip" class="chip"><ha-icon icon="mdi:skip-next"></ha-icon><span data-skip-label></span></button>
+                <button data-action="toggle-holiday" class="chip"><ha-icon icon="mdi:palm-tree"></ha-icon><span data-holiday-label></span></button>
+                <button data-action="toggle-vacation" class="chip vacation"><ha-icon icon="mdi:airplane"></ha-icon><span data-vacation-label></span></button>
+              </div>
+              <section class="details" data-details>
+                <div class="detail-row"><span data-source-label></span><strong data-source-value></strong></div>
+                <div class="detail-row"><span data-workday-label></span><strong data-workday-value></strong></div>
+                <div class="detail-row"><span data-confirmation-label></span><strong data-confirmation-value></strong></div>
+                <div class="detail-row" data-allow-row><span data-allow-label></span><strong data-allow-value></strong></div>
+                <div class="detail-row" data-block-row><span data-block-label></span><strong data-block-value></strong></div>
+                <div class="detail-row" data-native-row><span data-native-label></span><strong data-native-value></strong></div>
+                <div class="detail-row"><span data-safety-label></span><strong data-safety-value></strong></div>
+                <p data-summary></p>
+              </section>
+            </section>
           </div>
-          <section class="details" data-details>
-            <div class="detail-row"><span data-source-label></span><strong data-source-value></strong></div>
-            <div class="detail-row"><span data-workday-label></span><strong data-workday-value></strong></div>
-            <div class="detail-row"><span data-confirmation-label></span><strong data-confirmation-value></strong></div>
-            <div class="detail-row" data-allow-row><span data-allow-label></span><strong data-allow-value></strong></div>
-            <div class="detail-row" data-block-row><span data-block-label></span><strong data-block-value></strong></div>
-            <div class="detail-row" data-native-row><span data-native-label></span><strong data-native-value></strong></div>
-            <div class="detail-row"><span data-safety-label></span><strong data-safety-value></strong></div>
-            <p data-summary></p>
-          </section>
         </div>
       </ha-card>${this._styles()}`;
     this.shadowRoot.addEventListener("click", this._onClick);
@@ -553,16 +564,24 @@ class ClockAdvancedCard extends HTMLElement {
     const vacationDisabled = !vacationEntity;
     if (vacationButton && vacationButton.disabled !== vacationDisabled) vacationButton.disabled = vacationDisabled;
     this._hidden('[data-action="toggle-holiday"]', attrs.schedule_source === "schedule_entity");
-    this._hidden('[data-action="toggle-details"]', mode !== "advanced");
+    const activeOptionCount = [skipped, holiday, vacation].filter(Boolean).length;
+    this._hidden("[data-menu-shell]", mode === "compact");
     this._text("[data-skip-label]", t.skip);
     this._text("[data-holiday-label]", t.holiday);
     this._text("[data-vacation-label]", t.vacationMode);
-    this._text("[data-details-label]", this._detailsOpen ? t.less : t.more);
+    this._text("[data-details-label]", this._detailsOpen ? t.closeOptions : t.options);
+    this._text("[data-options-heading]", t.options);
+    this._text("[data-options-summary]", activeOptionCount ? `${activeOptionCount} ${t.activeOptions}` : "");
+    this._text("[data-options-count]", String(activeOptionCount));
+    this._hidden("[data-options-count]", !activeOptionCount);
+    detailsButton?.classList.toggle("selected", this._detailsOpen || activeOptionCount > 0);
+    detailsButton?.setAttribute("aria-expanded", String(this._detailsOpen));
     const detailsIcon = this._node("[data-details-icon]");
-    const detailsIconValue = `mdi:chevron-${this._detailsOpen ? "up" : "down"}`;
+    const detailsIconValue = this._detailsOpen ? "mdi:close" : "mdi:tune-variant";
     if (detailsIcon?.getAttribute("icon") !== detailsIconValue) detailsIcon?.setAttribute("icon", detailsIconValue);
 
-    this._hidden("[data-details]", mode !== "advanced" || !this._detailsOpen);
+    this._hidden("[data-control-menu]", mode === "compact" || !this._detailsOpen);
+    this._hidden("[data-details]", mode !== "advanced");
     this._text("[data-source-label]", t.source);
     this._text("[data-source-value]", t[attrs.schedule_source] || t.weekly);
     this._text("[data-workday-label]", t.workdayRule);
@@ -707,7 +726,7 @@ class ClockAdvancedCard extends HTMLElement {
     return `<style>
       :host { display:block; container-type:inline-size; --ca-accent:#93c5fd; --ca-warm:#f7ca78; }
       [hidden] { display:none!important; }
-      ha-card { box-sizing:border-box; width:100%; overflow:hidden; padding:15px; color:var(--primary-text-color); background:color-mix(in srgb,var(--card-background-color,#20262e) 80%,#283443 20%); border:1px solid color-mix(in srgb,var(--divider-color) 78%,#94a3b8 22%); border-radius:22px; box-shadow:var(--ha-card-box-shadow); }
+      ha-card { position:relative; box-sizing:border-box; width:100%; overflow:hidden; padding:15px; color:var(--primary-text-color); background:color-mix(in srgb,var(--card-background-color,#20262e) 80%,#283443 20%); border:1px solid color-mix(in srgb,var(--divider-color) 78%,#94a3b8 22%); border-radius:22px; box-shadow:var(--ha-card-box-shadow); }
       .state-ringing,.state-pre_alarm { --ca-accent:#fb923c; --ca-warm:#fb923c; }
       .state-snoozed { --ca-accent:#a78bfa; --ca-warm:#a78bfa; }
       .state-timeout,.state-error { --ca-accent:#f87171; --ca-warm:#f87171; }
@@ -780,18 +799,24 @@ class ClockAdvancedCard extends HTMLElement {
       .primary { flex:1; min-width:0; border:0; border-radius:13px; padding:10px 7px; display:flex; gap:6px; justify-content:center; align-items:center; font-size:.72rem; font-weight:750; }
       .snooze { background:color-mix(in srgb,#8b5cf6 20%,var(--card-background-color)); color:#c4b5fd; }
       .dismiss { background:var(--ca-accent); color:#111827; }
-      .toggles { flex-wrap:wrap; gap:8px; margin-top:13px; }
+      .menu-shell { position:relative; display:flex; justify-content:flex-end; margin-top:12px; }
+      .menu-trigger { min-width:108px; justify-content:center; background:color-mix(in srgb,var(--secondary-background-color) 86%,#64748b 14%); }
+      .menu-trigger small { display:grid; place-items:center; min-width:18px; height:18px; padding:0 4px; border-radius:999px; background:var(--ca-accent); color:#111827; font-size:.6rem; font-weight:850; }
+      .control-menu { position:absolute; z-index:8; right:0; bottom:calc(100% + 8px); box-sizing:border-box; width:min(100%,340px); max-height:min(56vh,390px); overflow-y:auto; overscroll-behavior:contain; padding:12px; border:1px solid color-mix(in srgb,var(--divider-color) 68%,var(--ca-accent) 32%); border-radius:16px; background:color-mix(in srgb,var(--card-background-color,#20262e) 94%,#283443 6%); box-shadow:0 14px 38px rgba(0,0,0,.34); }
+      .menu-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:1px 2px 10px; }
+      .menu-heading strong { font-size:.75rem; }
+      .menu-heading span { color:var(--ca-accent); font-size:.65rem; }
+      .toggles { flex-wrap:wrap; gap:8px; margin:0; }
       .chip { display:flex; gap:5px; align-items:center; min-height:35px; padding:7px 11px; border-radius:999px; border:1px solid color-mix(in srgb,var(--divider-color) 72%,#94a3b8 28%); background:color-mix(in srgb,var(--card-background-color) 92%,#64748b 8%); font-size:.7rem; }
       .chip.selected { background:color-mix(in srgb,var(--ca-warm) 16%,transparent); border-color:color-mix(in srgb,var(--ca-warm) 50%,var(--divider-color)); }
       .chip.vacation.selected { color:#5eead4; border-color:color-mix(in srgb,#5eead4 58%,var(--divider-color)); background:color-mix(in srgb,#5eead4 14%,transparent); }
-      .details-toggle { flex-basis:auto; }
-      .details { display:grid; gap:14px; margin-top:14px; padding-top:14px; border-top:1px solid var(--divider-color); }
+      .details { display:grid; gap:12px; margin-top:12px; padding-top:12px; border-top:1px solid var(--divider-color); }
       .detail-row { display:grid; gap:4px; }
       .detail-row span { color:var(--secondary-text-color); font-size:.7rem; }
       .detail-row strong { font-size:.75rem; line-height:1.3; }
       .details p { margin:0; color:var(--secondary-text-color); font-size:.7rem; line-height:1.5; }
       .missing { padding:24px; display:grid; gap:8px; } .missing small { color:var(--secondary-text-color); }
-      .compact .progress-panel,.compact .schedule,.compact .toggles,.compact .details { display:none; }
+      .compact .progress-panel,.compact .schedule,.compact .menu-shell { display:none; }
       .compact main { padding-bottom:4px; }
       .easy .schedule,.easy .details { display:none; }
       @container (max-width:300px) { ha-card { padding:13px; border-radius:19px; } .brand-lockup { gap:7px; } .brand-logo { flex-basis:27px; width:27px; height:27px; } .logo-icon { --mdc-icon-size:17px; } .time { font-size:2.45rem; } .brand { font-size:.62rem; } .status-pill { padding:7px 9px; } .context { align-items:flex-start; flex-direction:column; } .countdown { flex-basis:auto; min-width:0; text-align:left; } }
