@@ -1,7 +1,7 @@
 {
   "domain": "clock_advanced",
   "name": "Clock Advanced",
-  "version": "2026.8.1b3",
+  "version": "2026.8.1b4",
   "config_flow": true,
   "integration_type": "hub",
   "iot_class": "calculated",

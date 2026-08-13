@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 2026.8.1b4 - 2026-08-13
+
+- Added a compact animated alarm-clock logo to the Card header with distinct motion for scheduled, pre-alarm, ringing, snoozed, vacation, dismissed, skipped, timeout, and error states.
+- Kept the logo at a fixed responsive size and preserved its DOM identity across normal Home Assistant updates so the animation cannot introduce dashboard reflow or scroll movement.
+- Disabled all logo animation and transitions automatically when the operating system requests reduced motion.
+
 ## 2026.8.1b3 - 2026-08-13
 
 - Split the customer-facing concepts clearly: **Holiday time / Ferienzeit** keeps the alarm enabled at its alternative schedule time, while **Vacation / Urlaub** blocks it completely.
