@@ -34,7 +34,7 @@
       },
       "behavior": {
         "title": "Alarm lifecycle",
-        "description": "Step 5 of 7 · Repeat cadence and snooze are separate. Timeout covers the complete alarm session, including snoozes.",
+        "description": "Repeat cadence, Snooze and the complete-session timeout remain separate.",
         "data": {
           "pre_alarm_minutes": "Pre-alarm lead time (minutes)",
           "repeat_interval_minutes": "Repeat interval (minutes)",
@@ -66,7 +66,7 @@
       },
       "actions": {
         "title": "Action phases",
-        "description": "Step 6 of 7 · Build normal Home Assistant action sequences. Start runs for the initial alarm and again after each completed snooze. Snooze runs immediately when pressed; Escalate runs once after the configured threshold.",
+        "description": "Optional actions for automations, music, and lights. Empty fields are completely fine. Start runs for the initial alarm and again after each completed Snooze.",
         "data": {
           "actions_prepare": "Prepare / pre-alarm", "actions_start": "Start",
           "actions_repeat": "Repeat", "actions_escalate": "Escalate",

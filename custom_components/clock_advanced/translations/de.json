@@ -34,7 +34,7 @@
       },
       "behavior": {
         "title": "Weckablauf",
-        "description": "Schritt 5 von 7 · Wiederholungsrhythmus und Schlummern sind getrennt. Das Zeitlimit gilt für den gesamten Weckvorgang einschließlich Schlummern.",
+        "description": "Wiederholungsrhythmus, Schlummern und das Zeitlimit des gesamten Weckvorgangs bleiben getrennt.",
         "data": {
           "pre_alarm_minutes": "Vorlauf Voralarm (Minuten)",
           "repeat_interval_minutes": "Wiederholungsintervall (Minuten)",
@@ -65,7 +65,7 @@
       },
       "actions": {
         "title": "Aktionsphasen",
-        "description": "Schritt 6 von 7 · Baue normale Home-Assistant-Aktionsfolgen. Start läuft beim ersten Klingeln und nach jedem abgelaufenen Schlummern erneut. Schlummern läuft sofort beim Tastendruck; Eskalieren einmalig nach dem eingestellten Grenzwert.",
+        "description": "Optionale Aktionen für Automationen, Musik und Licht. Leere Felder sind völlig in Ordnung. Start läuft beim ersten Klingeln und nach jedem abgelaufenen Schlummern erneut.",
         "data": {
           "actions_prepare": "Vorbereiten / Voralarm", "actions_start": "Start",
           "actions_repeat": "Wiederholen", "actions_escalate": "Eskalieren",
