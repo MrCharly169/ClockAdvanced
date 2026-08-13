@@ -43,7 +43,7 @@
       },
       "behavior": {
         "title": "Weckablauf",
-        "description": "Schritt 5 von 8 · Lege fest, wie sich der Wecker nach dem Start verhält. Die Standardwerte sind für einen normalen Wecker bereits sinnvoll.",
+        "description": "Lege fest, wie sich der Wecker nach dem Start verhält. Wiederholungsrhythmus, Schlummern und das Zeitlimit des gesamten Vorgangs bleiben getrennt.",
         "data": {
           "pre_alarm_minutes": "Vorlauf Voralarm (Minuten)",
           "repeat_interval_minutes": "Wiederholungsintervall (Minuten)",
@@ -155,7 +155,7 @@
       },
       "actions": {
         "title": "Aktionsphasen",
-        "description": "Schritt 7 von 8 · Optional für Automationen, Musik und Licht. Leere Felder sind völlig in Ordnung. Start läuft beim ersten Klingeln und nach jedem abgelaufenen Schlummern erneut.",
+        "description": "Optionale Aktionen für Automationen, Musik und Licht. Leere Felder sind völlig in Ordnung. Start läuft beim ersten Klingeln und nach jedem abgelaufenen Schlummern erneut.",
         "data": {
           "actions_prepare": "Vorbereiten / Voralarm", "actions_start": "Start",
           "actions_repeat": "Wiederholen", "actions_escalate": "Eskalieren",

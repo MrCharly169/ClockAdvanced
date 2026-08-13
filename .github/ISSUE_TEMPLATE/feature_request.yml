@@ -1,0 +1,58 @@
+name: Feature request
+description: Suggest a customer-facing improvement without including private installation data.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Explain the user problem first. Please do not include private entity IDs, notification targets, URLs, credentials, or production diagnostics.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: What is difficult or impossible today, and for whom?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the desired result in Home Assistant terms.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Main area
+      options:
+        - Setup or options flow
+        - Weekly schedule
+        - Home Assistant schedule source
+        - Conditions or safety
+        - Alarm lifecycle actions
+        - Notifications or reminder
+        - Compact Card
+        - Easy Card
+        - Advanced Card
+        - Badge
+        - Documentation or migration
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional. Mention existing Home Assistant features or workarounds you tried.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This request is generic and does not depend on private entity names or one household's production data.
+          required: true

@@ -18,7 +18,7 @@
 | Native editing | Storage dashboard, storage Schedule helper and native Card/Badge editors remain UI-editable | Docker browser test |
 | Onboarding notification | Entity-aware retry creates one Easy Card and native Badge notification per new clock | `tests/test_package.py`, Docker browser test |
 | Brand assets | Required local light/dark icons and logos are packaged and served | `tests/test_package.py`, HA smoke test |
-| Setup wizard | Seven steps, source branching, translations and explicit review confirmation | HA config-flow live test |
+| Setup wizard | Ten customer-oriented steps, source branching, translations and explicit review confirmation | HA config-flow live test |
 | Localization | EN and DE contain the same setup/entity surfaces | `tests/test_package.py` |
 | Privacy | Diagnostics redact action sequences and linked entities | `tests/test_package.py` |
 | Packaging | HACS, manifest, changelog and legacy loader are coherent | `scripts/build_release.py --check` |

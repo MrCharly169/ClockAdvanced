@@ -1,0 +1,116 @@
+name: Bug report
+description: Report a reproducible Clock Advanced integration, Card, Badge, schedule, or runtime problem.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Clock Advanced. Use neutral names and remove credentials, URLs, private entity IDs, notification targets, access tokens, and other personal data before submitting.
+
+  - type: input
+    id: home_assistant_version
+    attributes:
+      label: Home Assistant version
+      description: Find this under Settings → About.
+      placeholder: "2026.8.1"
+    validations:
+      required: true
+
+  - type: input
+    id: clock_advanced_version
+    attributes:
+      label: Clock Advanced version
+      description: Use the installed version shown by HACS or the integration manifest.
+      placeholder: "2026.8.1b5"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: card_mode
+    attributes:
+      label: Card mode
+      options:
+        - Not applicable
+        - Compact
+        - Easy
+        - Advanced
+        - Badge
+    validations:
+      required: true
+
+  - type: dropdown
+    id: alarm_source
+    attributes:
+      label: Alarm source
+      options:
+        - Clock Advanced weekly schedule
+        - Home Assistant schedule entity
+        - One-time override
+        - Unsure or not applicable
+    validations:
+      required: true
+
+  - type: dropdown
+    id: observed_state
+    attributes:
+      label: Observed state
+      options:
+        - idle
+        - scheduled
+        - disabled
+        - vacation
+        - blocked
+        - pre_alarm
+        - ringing
+        - snoozed
+        - dismissed
+        - skipped
+        - timeout
+        - error
+        - unavailable or unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: observed_behavior
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and when it occurred.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: What did you expect?
+      description: Describe the expected state or behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Use neutral entity names and include the smallest repeatable sequence.
+      placeholder: |
+        1. Configure …
+        2. Set the source to …
+        3. Wait for or press …
+        4. Observe …
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Relevant log or diagnostic excerpt
+      description: Optional. Include only the smallest relevant excerpt after reviewing and redacting it. Never include tokens, credentials, private notification targets, personal URLs, or full production diagnostics.
+      render: text
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed credentials, private notification targets, personal URLs, and other sensitive data.
+          required: true

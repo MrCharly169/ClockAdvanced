@@ -4,7 +4,7 @@
 
 - Home Assistant 2026.8.0 or newer
 - integration domain `clock_advanced`
-- config-entry schema version 3 with migration from earlier Clock Advanced entries
+- config-entry schema version 4 with migration from earlier Clock Advanced entries
 - permanent Card resource `/clock_advanced/clock-advanced-card.js`
 - compatibility loader `/clock_advanced/clock-advanced.js`
 - Card contract version 1 on the status sensor

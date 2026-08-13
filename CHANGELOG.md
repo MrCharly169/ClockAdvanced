@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Rebuilt the repository and HACS README as an English product page with a synchronized full German edition, verified installation guidance, exact source/state/lifecycle documentation, real anonymized Card and Badge screenshots, lifecycle/source diagrams, and a 1280 × 640 social preview.
+- Added structured bug and feature forms, a pull-request template, security guidance, and a project code of conduct without changing integration, schedule, or runtime behavior.
+
 ## 2026.8.1b5 - 2026-08-13
 
 - Cleaned up the default Card surface while preserving direct weekday selection, the five-minute slider, exact time input, and day enable control in Advanced mode.
