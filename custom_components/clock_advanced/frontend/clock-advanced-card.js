@@ -48,8 +48,6 @@ const TEXT = {
     error: "Error",
     blocked: "Blocked",
     brand: "CLOCK ADVANCED",
-    prepare: "Prepare",
-    alarm: "Alarm",
     workday: "Workday",
     nonWorkday: "Non-workday",
     source: "Time source",
@@ -115,8 +113,6 @@ const TEXT = {
     error: "Fehler",
     blocked: "Gesperrt",
     brand: "CLOCK ADVANCED",
-    prepare: "Vorbereitung",
-    alarm: "Wecken",
     workday: "Arbeitstag",
     nonWorkday: "Freier Tag",
     source: "Zeitquelle",
@@ -248,16 +244,15 @@ class ClockAdvancedCard extends HTMLElement {
 
   getCardSize() {
     const mode = this._mode();
-    return mode === "compact" ? 4 : mode === "easy" ? 7 : 14;
+    return mode === "compact" ? 3 : mode === "easy" ? 5 : 9;
   }
 
   getGridOptions() {
     const mode = this._mode();
     return {
-      rows: mode === "compact" ? 4 : mode === "easy" ? 7 : 14,
       columns: mode === "compact" ? 6 : 12,
-      min_rows: mode === "compact" ? 4 : mode === "easy" ? 7 : 12,
       min_columns: mode === "compact" ? 4 : 6,
+      max_columns: 12,
     };
   }
 
@@ -306,13 +301,6 @@ class ClockAdvancedCard extends HTMLElement {
     return state.attributes?.friendly_name || entityId;
   }
 
-  _phaseProgress(status) {
-    if (status === "pre_alarm") return { prepare: 72, alarm: 16 };
-    if (status === "ringing") return { prepare: 100, alarm: 100 };
-    if (status === "snoozed") return { prepare: 100, alarm: 48 };
-    return { prepare: 0, alarm: 0 };
-  }
-
   _ensureStructure() {
     if (!this.shadowRoot || this._structureReady) return;
     this.shadowRoot.innerHTML = `
@@ -335,10 +323,6 @@ class ClockAdvancedCard extends HTMLElement {
             <div class="context"><span data-context></span><span class="countdown" data-countdown></span></div>
             <div class="metrics" data-metrics><span data-repeats></span><span data-snoozes></span></div>
           </main>
-          <section class="progress-panel">
-            <div class="progress-row"><span data-prepare-label></span><div class="track"><i data-prepare-progress></i></div></div>
-            <div class="progress-row"><span data-alarm-label></span><div class="track secondary"><i data-alarm-progress></i></div></div>
-          </section>
           <section class="schedule" data-schedule>
             <div class="days">
               ${Array.from({ length: 7 }, (_, index) => `<button type="button" class="day off" data-action="select-day" data-day="${index}"><span></span><strong>—</strong></button>`).join("")}
@@ -493,7 +477,6 @@ class ClockAdvancedCard extends HTMLElement {
     const vacationEntity = guards.vacation || controls.vacation_mode;
     const vacation = vacationEntity && this._hass.states[vacationEntity]?.state === "on";
     const statusText = t[entity.state] || entity.state;
-    const progress = this._phaseProgress(entity.state);
     const workdayState = guards.workday ? this._hass.states[guards.workday]?.state : null;
     const dayLabel = target ? target.toLocaleDateString(lang, { weekday: "long" }) : "";
     const dayKind = workdayState === "on" ? t.workday : workdayState === "off" ? t.nonWorkday : t.weekly;
@@ -512,18 +495,13 @@ class ClockAdvancedCard extends HTMLElement {
     this._hidden("[data-metrics]", !active);
     this._text("[data-repeats]", `${attrs.repeat_count || 0} ${t.repeats}`);
     this._text("[data-snoozes]", `${attrs.snooze_count || 0} ${t.snoozes}`);
-    this._text("[data-prepare-label]", t.prepare);
-    this._text("[data-alarm-label]", t.alarm);
-    const prepareProgress = this._node("[data-prepare-progress]");
-    const alarmProgress = this._node("[data-alarm-progress]");
-    const prepareWidth = `${progress.prepare}%`;
-    const alarmWidth = `${progress.alarm}%`;
-    if (prepareProgress && prepareProgress.style.width !== prepareWidth) prepareProgress.style.width = prepareWidth;
-    if (alarmProgress && alarmProgress.style.width !== alarmWidth) alarmProgress.style.width = alarmWidth;
-
     const scheduleNode = this._node("[data-schedule]");
     if (scheduleNode?.getAttribute("aria-label") !== t.schedule) scheduleNode?.setAttribute("aria-label", t.schedule);
     this._hidden("[data-schedule]", mode !== "advanced" || !schedule.length);
+    const holidayTime = holiday && settings.holiday_enabled !== false
+      ? String(settings.holiday_time || "").slice(0, 5)
+      : "";
+    scheduleNode?.classList.toggle("holiday-active", Boolean(holidayTime));
     for (let index = 0; index < 7; index += 1) {
       const day = schedule[index] || {};
       const dayNode = this._node(`[data-day="${index}"]`);
@@ -532,7 +510,7 @@ class ClockAdvancedCard extends HTMLElement {
       if (dayNode.className !== dayClass) dayNode.className = dayClass;
       const dayParts = dayNode.querySelectorAll("span,strong");
       const dayLabelText = t.days[index] || day.day || "";
-      const dayTimeText = day.enabled ? String(day.time || "").slice(0, 5) : "—";
+      const dayTimeText = day.enabled ? holidayTime || String(day.time || "").slice(0, 5) : "—";
       if (dayParts[0] && dayParts[0].textContent !== dayLabelText) dayParts[0].textContent = dayLabelText;
       if (dayParts[1] && dayParts[1].textContent !== dayTimeText) dayParts[1].textContent = dayTimeText;
     }
@@ -724,26 +702,35 @@ class ClockAdvancedCard extends HTMLElement {
 
   _styles() {
     return `<style>
-      :host { display:block; container-type:inline-size; --ca-accent:#93c5fd; --ca-warm:#f7ca78; }
+      :host { display:block; width:100%; max-width:100%; min-width:0; overflow:visible; overflow-anchor:none; container-type:inline-size; --ca-accent:#93c5fd; --ca-warm:#f7ca78; }
+      * { box-sizing:border-box; min-width:0; }
       [hidden] { display:none!important; }
-      ha-card { position:relative; box-sizing:border-box; width:100%; overflow:hidden; padding:15px; color:var(--primary-text-color); background:color-mix(in srgb,var(--card-background-color,#20262e) 80%,#283443 20%); border:1px solid color-mix(in srgb,var(--divider-color) 78%,#94a3b8 22%); border-radius:22px; box-shadow:var(--ha-card-box-shadow); }
+      ha-card { position:relative; display:block; width:100%; max-width:100%; overflow:hidden; padding:16px; color:var(--primary-text-color,#fff); background:var(--ha-card-background,var(--card-background-color,#202020)); border:1px solid rgba(255,255,255,.09); border-radius:22px; box-shadow:none; }
+      .state-scheduled { background:linear-gradient(135deg,rgba(59,130,246,.13),var(--ha-card-background,var(--card-background-color,#202020)) 72%); }
+      .state-ringing,.state-pre_alarm { background:linear-gradient(135deg,rgba(251,146,60,.22),var(--ha-card-background,var(--card-background-color,#202020)) 72%); }
+      .state-snoozed { background:linear-gradient(135deg,rgba(167,139,250,.18),var(--ha-card-background,var(--card-background-color,#202020)) 72%); }
+      .state-vacation { background:linear-gradient(135deg,rgba(45,212,191,.16),var(--ha-card-background,var(--card-background-color,#202020)) 72%); }
+      .state-blocked { background:linear-gradient(135deg,rgba(251,191,36,.17),var(--ha-card-background,var(--card-background-color,#202020)) 72%); }
+      .state-timeout,.state-error { background:linear-gradient(135deg,rgba(248,113,113,.22),var(--ha-card-background,var(--card-background-color,#202020)) 72%); }
+      .state-disabled { background:linear-gradient(135deg,rgba(148,163,184,.12),var(--ha-card-background,var(--card-background-color,#202020)) 72%); }
       .state-ringing,.state-pre_alarm { --ca-accent:#fb923c; --ca-warm:#fb923c; }
       .state-snoozed { --ca-accent:#a78bfa; --ca-warm:#a78bfa; }
       .state-timeout,.state-error { --ca-accent:#f87171; --ca-warm:#f87171; }
       .state-vacation { --ca-accent:#5eead4; --ca-warm:#5eead4; }
       .state-blocked { --ca-accent:#fbbf24; --ca-warm:#fbbf24; }
       .state-disabled { --ca-accent:#94a3b8; --ca-warm:#94a3b8; }
-      header,.brand-lockup,.toggles,.primary-actions,.context,.progress-row { display:flex; align-items:center; }
+      header,.brand-lockup,.toggles,.primary-actions,.context { display:flex; align-items:center; }
       header { justify-content:space-between; gap:10px; }
       .brand-lockup { min-width:0; gap:9px; }
-      .brand-logo { position:relative; display:grid; place-items:center; flex:0 0 30px; width:30px; height:30px; color:var(--ca-accent); border-radius:50%; background:color-mix(in srgb,var(--ca-accent) 12%,var(--card-background-color)); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ca-accent) 28%,transparent); transition:color .35s ease,background-color .35s ease,box-shadow .35s ease,opacity .35s ease; transform-origin:50% 55%; }
-      .logo-icon { --mdc-icon-size:19px; position:relative; z-index:2; filter:drop-shadow(0 0 5px color-mix(in srgb,var(--ca-accent) 40%,transparent)); }
+      ha-icon { display:grid; place-items:center; align-content:center; justify-content:center; flex:0 0 18px; width:18px; height:18px; min-width:18px; max-width:18px; --mdc-icon-size:16px; line-height:0; margin:0; padding:0; position:static; }
+      .brand-logo { position:relative; display:grid; place-items:center; align-content:center; justify-content:center; flex:0 0 30px; width:30px; height:30px; color:var(--ca-accent); border-radius:50%; background:rgba(255,255,255,.07); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ca-accent) 28%,transparent); transition:color .35s ease,background-color .35s ease,box-shadow .35s ease,opacity .35s ease; transform-origin:50% 55%; }
+      .logo-icon { --mdc-icon-size:19px; width:19px; height:19px; min-width:19px; max-width:19px; position:relative; z-index:2; filter:drop-shadow(0 0 5px color-mix(in srgb,var(--ca-accent) 40%,transparent)); }
       .logo-orbit { position:absolute; inset:3px; z-index:1; border:1px solid color-mix(in srgb,var(--ca-accent) 58%,transparent); border-radius:50%; opacity:.42; }
       .brand-logo::before,.brand-logo::after { content:""; position:absolute; pointer-events:none; border-radius:50%; }
       .brand-logo::before { inset:-3px; border:1px solid color-mix(in srgb,var(--ca-accent) 36%,transparent); opacity:0; }
       .brand-logo::after { inset:8px; z-index:0; background:color-mix(in srgb,var(--ca-accent) 28%,transparent); filter:blur(4px); opacity:.35; }
       .brand { color:var(--secondary-text-color); font-size:.7rem; font-weight:800; letter-spacing:.13em; }
-      .status-pill { display:flex; align-items:center; gap:7px; border:0; border-radius:999px; padding:8px 12px; background:color-mix(in srgb,var(--secondary-background-color) 86%,#94a3b8 14%); color:var(--primary-text-color); font-size:.72rem; font-weight:750; }
+      .status-pill { display:flex; align-items:center; justify-content:center; gap:7px; min-height:30px; border:0; border-radius:999px; padding:6px 10px; background:rgba(255,255,255,.085); color:var(--primary-text-color); font-size:.68rem; font-weight:850; line-height:1; }
       .status-pill i { width:7px; height:7px; border-radius:50%; background:var(--ca-accent); }
       .state-scheduled .brand-logo::before { animation:ca-logo-pulse 3.2s ease-out infinite; }
       .state-pre_alarm .brand-logo { animation:ca-logo-rise 2.2s ease-in-out infinite; }
@@ -765,49 +752,44 @@ class ClockAdvancedCard extends HTMLElement {
       @keyframes ca-logo-skip { 0% { transform:translateX(-4px); opacity:.35; } 55% { transform:translateX(3px); opacity:1; } 100% { transform:translateX(0); } }
       @keyframes ca-logo-alert { 0%,100% { box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ca-accent) 45%,transparent),0 0 0 transparent; } 50% { box-shadow:inset 0 0 0 1px var(--ca-accent),0 0 15px color-mix(in srgb,var(--ca-accent) 34%,transparent); } }
       h2 { margin:3px 0 0; font-size:.76rem; font-weight:760; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-      button { box-sizing:border-box; font:inherit; color:inherit; cursor:pointer; }
+      button { box-sizing:border-box; font:inherit; color:inherit; cursor:pointer; line-height:1; }
       button:disabled { opacity:.42; cursor:not-allowed; }
-      main { padding:20px 0 15px; }
+      main { padding:19px 0 14px; }
       .time { font-size:2.75rem; line-height:.95; font-weight:680; letter-spacing:-.055em; font-variant-numeric:tabular-nums; }
       .context { justify-content:space-between; gap:8px; margin-top:9px; color:var(--secondary-text-color); font-size:.72rem; }
       .countdown { flex:0 0 13ch; min-width:13ch; color:var(--ca-accent); font-size:.66rem; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; }
       .metrics { display:flex; gap:12px; margin-top:8px; font-size:.68rem; color:var(--secondary-text-color); }
-      .progress-panel { display:grid; gap:10px; padding:12px; border-radius:15px; background:color-mix(in srgb,var(--secondary-background-color) 88%,#64748b 12%); }
-      .progress-row { gap:10px; }
-      .progress-row>span { flex:0 0 45px; color:var(--secondary-text-color); font-size:.7rem; }
-      .track { height:5px; flex:1; overflow:hidden; border-radius:99px; background:color-mix(in srgb,var(--divider-color) 72%,#64748b 28%); }
-      .track i { display:block; height:100%; border-radius:inherit; background:var(--ca-warm); transition:width .25s ease; }
-      .track.secondary i { background:var(--ca-accent); }
-      .schedule { margin-top:12px; }
+      .schedule { margin-top:1px; }
       .days { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:5px; }
-      .day { min-width:0; border:1px solid transparent; color:inherit; text-align:center; padding:7px 1px; border-radius:11px; background:color-mix(in srgb,var(--secondary-background-color) 84%,#64748b 16%); }
+      .day { min-width:0; border:1px solid transparent; color:inherit; text-align:center; padding:7px 1px; border-radius:11px; background:rgba(255,255,255,.047); }
       .day span,.day strong { display:block; font-size:.62rem; }
       .day span { color:var(--secondary-text-color); }
       .day strong { margin-top:4px; font-size:.72rem; font-variant-numeric:tabular-nums; }
       .day.off { opacity:.42; }
       .day.selected { opacity:1; border-color:var(--ca-accent); box-shadow:0 0 0 1px color-mix(in srgb,var(--ca-accent) 35%,transparent); }
-      .schedule-editor { display:grid; gap:9px; margin-top:9px; padding:11px; border-radius:14px; background:color-mix(in srgb,var(--secondary-background-color) 88%,#64748b 12%); }
+      .schedule.holiday-active .day.on strong { color:var(--ca-accent); }
+      .schedule-editor { display:grid; gap:9px; margin-top:9px; padding:11px; border-radius:14px; background:rgba(255,255,255,.047); }
       .schedule-editor-head,.time-slider-label { display:flex; align-items:center; justify-content:space-between; gap:10px; }
       .schedule-editor-head>strong { font-size:.75rem; }
-      .day-toggle { display:flex; align-items:center; gap:5px; min-height:31px; padding:5px 9px; border:1px solid var(--divider-color); border-radius:999px; background:transparent; font-size:.68rem; }
+      .day-toggle { display:flex; align-items:center; justify-content:center; gap:5px; min-height:31px; padding:5px 9px; border:1px solid rgba(255,255,255,.10); border-radius:999px; background:rgba(255,255,255,.035); font-size:.68rem; }
       .day-toggle.selected { color:var(--ca-accent); border-color:color-mix(in srgb,var(--ca-accent) 62%,var(--divider-color)); }
       .time-slider-label { color:var(--secondary-text-color); font-size:.68rem; }
       .time-slider-label output { color:var(--primary-text-color); font-weight:750; font-variant-numeric:tabular-nums; }
       [data-schedule-slider] { width:100%; margin:0; accent-color:var(--ca-accent); }
       [data-schedule-time] { box-sizing:border-box; width:100%; min-height:36px; padding:6px 10px; border:1px solid var(--divider-color); border-radius:10px; background:var(--card-background-color); color:var(--primary-text-color); font:inherit; font-variant-numeric:tabular-nums; color-scheme:dark light; }
       .primary-actions { gap:8px; margin-top:12px; }
-      .primary { flex:1; min-width:0; border:0; border-radius:13px; padding:10px 7px; display:flex; gap:6px; justify-content:center; align-items:center; font-size:.72rem; font-weight:750; }
+      .primary { flex:1; min-width:0; min-height:38px; border:0; border-radius:13px; padding:10px 7px; display:flex; gap:6px; justify-content:center; align-items:center; font-size:.72rem; font-weight:750; }
       .snooze { background:color-mix(in srgb,#8b5cf6 20%,var(--card-background-color)); color:#c4b5fd; }
       .dismiss { background:var(--ca-accent); color:#111827; }
       .menu-shell { position:relative; display:flex; justify-content:flex-end; margin-top:12px; }
-      .menu-trigger { min-width:108px; justify-content:center; background:color-mix(in srgb,var(--secondary-background-color) 86%,#64748b 14%); }
+      .menu-trigger { min-width:108px; justify-content:center; background:rgba(255,255,255,.07); }
       .menu-trigger small { display:grid; place-items:center; min-width:18px; height:18px; padding:0 4px; border-radius:999px; background:var(--ca-accent); color:#111827; font-size:.6rem; font-weight:850; }
-      .control-menu { position:absolute; z-index:8; right:0; bottom:calc(100% + 8px); box-sizing:border-box; width:min(100%,340px); max-height:min(56vh,390px); overflow-y:auto; overscroll-behavior:contain; padding:12px; border:1px solid color-mix(in srgb,var(--divider-color) 68%,var(--ca-accent) 32%); border-radius:16px; background:color-mix(in srgb,var(--card-background-color,#20262e) 94%,#283443 6%); box-shadow:0 14px 38px rgba(0,0,0,.34); }
+      .control-menu { position:absolute; z-index:8; right:0; bottom:calc(100% + 8px); box-sizing:border-box; width:min(100%,340px); max-height:min(56vh,390px); overflow-y:auto; overscroll-behavior:contain; padding:12px; border:1px solid rgba(255,255,255,.10); border-radius:16px; background:var(--ha-card-background,var(--card-background-color,#202020)); box-shadow:0 14px 38px rgba(0,0,0,.34); }
       .menu-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:1px 2px 10px; }
       .menu-heading strong { font-size:.75rem; }
       .menu-heading span { color:var(--ca-accent); font-size:.65rem; }
       .toggles { flex-wrap:wrap; gap:8px; margin:0; }
-      .chip { display:flex; gap:5px; align-items:center; min-height:35px; padding:7px 11px; border-radius:999px; border:1px solid color-mix(in srgb,var(--divider-color) 72%,#94a3b8 28%); background:color-mix(in srgb,var(--card-background-color) 92%,#64748b 8%); font-size:.7rem; }
+      .chip { display:flex; gap:5px; align-items:center; justify-content:center; min-height:35px; padding:7px 11px; border-radius:999px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.065); font-size:.7rem; }
       .chip.selected { background:color-mix(in srgb,var(--ca-warm) 16%,transparent); border-color:color-mix(in srgb,var(--ca-warm) 50%,var(--divider-color)); }
       .chip.vacation.selected { color:#5eead4; border-color:color-mix(in srgb,#5eead4 58%,var(--divider-color)); background:color-mix(in srgb,#5eead4 14%,transparent); }
       .details { display:grid; gap:12px; margin-top:12px; padding-top:12px; border-top:1px solid var(--divider-color); }
@@ -816,7 +798,7 @@ class ClockAdvancedCard extends HTMLElement {
       .detail-row strong { font-size:.75rem; line-height:1.3; }
       .details p { margin:0; color:var(--secondary-text-color); font-size:.7rem; line-height:1.5; }
       .missing { padding:24px; display:grid; gap:8px; } .missing small { color:var(--secondary-text-color); }
-      .compact .progress-panel,.compact .schedule,.compact .menu-shell { display:none; }
+      .compact .schedule,.compact .menu-shell { display:none; }
       .compact main { padding-bottom:4px; }
       .easy .schedule,.easy .details { display:none; }
       @container (max-width:300px) { ha-card { padding:13px; border-radius:19px; } .brand-lockup { gap:7px; } .brand-logo { flex-basis:27px; width:27px; height:27px; } .logo-icon { --mdc-icon-size:17px; } .time { font-size:2.45rem; } .brand { font-size:.62rem; } .status-pill { padding:7px 9px; } .context { align-items:flex-start; flex-direction:column; } .countdown { flex-basis:auto; min-width:0; text-align:left; } }

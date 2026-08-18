@@ -189,6 +189,7 @@ class PackageTests(unittest.TestCase):
         self.assertIn('data-schedule-slider type="range"', frontend)
         self.assertIn('data-schedule-time type="time"', frontend)
         self.assertIn('data-action="toggle-vacation"', frontend)
+        self.assertIn('"holiday_time": self.runtime.schedule.holiday_time.isoformat()', sensor)
 
 
 if __name__ == "__main__":

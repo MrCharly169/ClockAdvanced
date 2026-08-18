@@ -119,10 +119,14 @@ global.document = {
   const instance = new Card();
   instance.setConfig(stub);
   instance.hass = hass;
-  if (instance.getCardSize() !== 7 || instance.getGridOptions().columns !== 12 || instance.getGridOptions().rows !== 7) throw new Error("Sizing API is invalid");
+  if (instance.getCardSize() !== 5 || instance.getGridOptions().columns !== 12
+    || "rows" in instance.getGridOptions() || "min_rows" in instance.getGridOptions()) throw new Error("Sizing API must allow automatic row measurement");
   instance.setConfig({ ...stub, mode: "advanced" });
   instance.hass = hass;
-  if (instance.getCardSize() !== 14 || instance.getGridOptions().rows !== 14 || instance.getGridOptions().min_rows !== 12) throw new Error("Advanced sizing does not match the cleaner rendered height");
+  if (instance.getCardSize() !== 9 || "rows" in instance.getGridOptions() || instance.getGridOptions().max_columns !== 12) throw new Error("Advanced sizing must not reserve invisible rows");
+  if (source.includes('class="progress-panel"') || source.includes("data-prepare-progress") || source.includes("data-alarm-progress")) {
+    throw new Error("Decorative Prepare and Alarm bars are still rendered");
+  }
   if (!["click", "input", "change"].every((type) => instance.shadowRoot.listeners.has(type))) throw new Error("Stable Shadow Root event delegation is incomplete");
   const cardRenderCount = instance.shadowRoot.writeCount;
   const cardRoot = instance.shadowRoot.querySelector("ha-card");
@@ -221,12 +225,22 @@ global.document = {
   if (!controlMenu.hidden || instance._detailsOpen) throw new Error("Card options submenu did not close");
 
   const weeklySchedule = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-    .map((day) => ({ day, enabled: true, time: "06:00:00" }));
+    .map((day) => ({ day, enabled: true, time: "06:30:00" }));
   instance.hass = { ...hass, states: {
     ...hass.states,
-    "sensor.clock_status": { state: "scheduled", attributes: { ...rapidAttrs, schedule: weeklySchedule, schedule_source: "weekly" } },
+    "sensor.clock_status": { state: "scheduled", attributes: {
+      ...rapidAttrs,
+      schedule: weeklySchedule,
+      schedule_source: "weekly",
+      settings: { ...rapidAttrs.settings, holiday_enabled: true, holiday_time: "06:00:00" },
+    } },
+    "switch.clock_holiday": { state: "on", attributes: {} },
     "switch.clock_vacation": { state: "off", attributes: {} },
   } };
+  const mondayTime = instance.shadowRoot.querySelector('[data-day="0"]').children[1];
+  if (mondayTime.textContent !== "06:00" || !instance.shadowRoot.querySelector("[data-schedule]").classList.contains("holiday-active")) {
+    throw new Error("Holiday mode did not update the effective weekly overview times");
+  }
   const tuesdayButton = instance.shadowRoot.querySelector('[data-day="1"]');
   tuesdayButton.dataset.action = "select-day";
   tuesdayButton.dataset.day = "1";

@@ -164,6 +164,8 @@ class ClockStatusSensor(ClockAdvancedEntity, SensorEntity):
                         DEFAULT_ESCALATE_AFTER_SNOOZES,
                     )
                 ),
+                "holiday_enabled": self.runtime.schedule.holiday_enabled,
+                "holiday_time": self.runtime.schedule.holiday_time.isoformat(),
                 "block_non_workdays": bool(
                     self.runtime.config.get(CONF_BLOCK_NON_WORKDAYS, False)
                 ),
