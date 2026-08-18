@@ -21,7 +21,7 @@
 
 **Ein vollständiger, über die Oberfläche konfigurierbarer Wecker für Home Assistant.** Clock Advanced vereint Zeitplan, Bedingungen, Aktionen, Schlummerverhalten, Eskalation und sicheren Abschluss eines Weckers in einer Integration. Eine responsive Dashboard-Card und ein kompaktes Badge sind enthalten.
 
-> **Release-Kanal:** `2026.8.1b6` ist die aktuell veröffentlichte Beta-/Vorabversion. Der neueste stabile Release ist `2026.8.0`. Beta-Releases dienen zum Testen aktueller Funktionen; der stabile Release ist die passendere Wahl für die etablierte Basis.
+> **Release-Kanal:** `2026.8.1b7` ist die aktuell veröffentlichte Beta-/Vorabversion. Der neueste stabile Release ist `2026.8.0`. Beta-Releases dienen zum Testen aktueller Funktionen; der stabile Release ist die passendere Wahl für die etablierte Basis.
 
 ## Mehr als eine Weckzeit
 
@@ -168,7 +168,7 @@ Die Schaltfläche **Abweichung löschen und neu berechnen** entfernt die einmali
 
 Der interne Wochenplan speichert für jeden Wochentag ein Aktiv-Flag und eine Uhrzeit. Deaktivierte Tage bleiben auch bei aktiver Ferienzeit deaktiviert.
 
-- **Ferienzeit** lässt den Wecker aktiv und ersetzt die normale Uhrzeit eines aktivierten Wochentags durch die konfigurierte alternative Uhrzeit. Sie gehört zum internen Wochenplan.
+- **Ferienzeit** lässt den Wecker aktiv und ersetzt normale Uhrzeiten durch zwei konfigurierbare Alternativen: eine für Montag–Freitag und eine für Wochenende/Feiertage. Deaktivierte Tage bleiben deaktiviert.
 - Ein optionaler **Arbeitstag-Sensor** kann bei `off` für heute die Nicht-Arbeitstag-Zeit anwenden. Alternativ kannst du Nicht-Arbeitstage vollständig blockieren.
 - **Urlaub** ist eine Sperre. Der integrationseigene Urlaubsschalter oder eine ausdrücklich gewählte externe Urlaubs-Entität verhindert Vorbereitung und Start. Wird Urlaub während eines aktiven Vorgangs eingeschaltet, beendet Clock Advanced ihn über den normalen Abschlussweg.
 
@@ -176,8 +176,8 @@ Ferienzeit verändert, *wann* ein aktivierter wöchentlicher Termin stattfindet.
 
 ## Card-Modi
 
-- **Kompakt** — Uhrzeit, Zustand und aktiver Alarmkontext im kleinsten Layout. Zeitplan, Lebenszyklus und Optionsmenü sind ausgeblendet.
-- **Einfach** — empfohlene Alltagsansicht mit Lebenszyklus, Schlummern/Beenden im aktiven Zustand und geschlossenem Options-Overlay für „Nächsten auslassen“, Ferienzeit und Urlaub.
+- **Kompakt** — Uhrzeit, Zustand und aktiver Alarmkontext im kleinsten Layout. Zeitplan und Optionsmenü sind ausgeblendet.
+- **Einfach** — empfohlene Alltagsansicht mit nächstem Alarmkontext, Schlummern/Beenden im aktiven Zustand und geschlossenem Options-Overlay für „Nächsten auslassen“, Ferienzeit und Urlaub.
 - **Erweitert** — Einfach plus Sieben-Tage-Plan, Fünf-Minuten-Schieberegler, exaktes Zeitfeld, Tagesaktivierung sowie technische Bedingungs- und Sicherheitsdetails in Optionen.
 
 `easy` ist Standard. Alte Werte `auto` und `standard` erscheinen als Einfach; `kiosk` erscheint als Erweitert. `language` akzeptiert `auto`, `en` oder `de`. Die Card folgt Themes, respektiert reduzierte Bewegung, unterstützt Sections-Grid-Größen und verwendet stabile DOM-Knoten, damit Countdown-Aktualisierungen Bedienelemente nicht absichtlich ersetzen oder Scrollen anfordern.

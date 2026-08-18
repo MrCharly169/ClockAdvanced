@@ -498,10 +498,14 @@ class ClockAdvancedCard extends HTMLElement {
     const scheduleNode = this._node("[data-schedule]");
     if (scheduleNode?.getAttribute("aria-label") !== t.schedule) scheduleNode?.setAttribute("aria-label", t.schedule);
     this._hidden("[data-schedule]", mode !== "advanced" || !schedule.length);
-    const holidayTime = holiday && settings.holiday_enabled !== false
+    const holidayWeekdayTime = holiday && settings.holiday_enabled !== false
       ? String(settings.holiday_time || "").slice(0, 5)
       : "";
-    scheduleNode?.classList.toggle("holiday-active", Boolean(holidayTime));
+    const holidayWeekendTime = holiday && settings.holiday_enabled !== false
+      ? String(settings.holiday_weekend_time || settings.holiday_time || "").slice(0, 5)
+      : "";
+    scheduleNode?.classList.toggle("holiday-active", Boolean(holidayWeekdayTime));
+    const todayIndex = (new Date().getDay() + 6) % 7;
     for (let index = 0; index < 7; index += 1) {
       const day = schedule[index] || {};
       const dayNode = this._node(`[data-day="${index}"]`);
@@ -510,7 +514,11 @@ class ClockAdvancedCard extends HTMLElement {
       if (dayNode.className !== dayClass) dayNode.className = dayClass;
       const dayParts = dayNode.querySelectorAll("span,strong");
       const dayLabelText = t.days[index] || day.day || "";
-      const dayTimeText = day.enabled ? holidayTime || String(day.time || "").slice(0, 5) : "—";
+      const usesHolidayWeekendTime = index >= 5 || (workdayState === "off" && index === todayIndex);
+      const effectiveHolidayTime = usesHolidayWeekendTime
+        ? holidayWeekendTime
+        : holidayWeekdayTime;
+      const dayTimeText = day.enabled ? effectiveHolidayTime || String(day.time || "").slice(0, 5) : "—";
       if (dayParts[0] && dayParts[0].textContent !== dayLabelText) dayParts[0].textContent = dayLabelText;
       if (dayParts[1] && dayParts[1].textContent !== dayTimeText) dayParts[1].textContent = dayTimeText;
     }
@@ -768,7 +776,7 @@ class ClockAdvancedCard extends HTMLElement {
       .day.off { opacity:.42; }
       .day.selected { opacity:1; border-color:var(--ca-accent); box-shadow:0 0 0 1px color-mix(in srgb,var(--ca-accent) 35%,transparent); }
       .schedule.holiday-active .day.on strong { color:var(--ca-accent); }
-      .schedule-editor { display:grid; gap:9px; margin-top:9px; padding:11px; border-radius:14px; background:rgba(255,255,255,.047); }
+      .schedule-editor { display:grid; gap:9px; margin-top:9px; padding:11px; overflow:hidden; border-radius:14px; background:rgba(255,255,255,.047); }
       .schedule-editor-head,.time-slider-label { display:flex; align-items:center; justify-content:space-between; gap:10px; }
       .schedule-editor-head>strong { font-size:.75rem; }
       .day-toggle { display:flex; align-items:center; justify-content:center; gap:5px; min-height:31px; padding:5px 9px; border:1px solid rgba(255,255,255,.10); border-radius:999px; background:rgba(255,255,255,.035); font-size:.68rem; }
@@ -776,7 +784,9 @@ class ClockAdvancedCard extends HTMLElement {
       .time-slider-label { color:var(--secondary-text-color); font-size:.68rem; }
       .time-slider-label output { color:var(--primary-text-color); font-weight:750; font-variant-numeric:tabular-nums; }
       [data-schedule-slider] { width:100%; margin:0; accent-color:var(--ca-accent); }
-      [data-schedule-time] { box-sizing:border-box; width:100%; min-height:36px; padding:6px 10px; border:1px solid var(--divider-color); border-radius:10px; background:var(--card-background-color); color:var(--primary-text-color); font:inherit; font-variant-numeric:tabular-nums; color-scheme:dark light; }
+      [data-schedule-time] { display:block; box-sizing:border-box; inline-size:100%; width:100%; max-inline-size:100%; max-width:100%; min-width:0; min-height:36px; margin:0 auto; padding:6px 10px; overflow:hidden; border:1px solid var(--divider-color); border-radius:10px; background:var(--card-background-color); color:var(--primary-text-color); font:inherit; font-size:16px; font-variant-numeric:tabular-nums; text-align:center; color-scheme:dark light; -webkit-appearance:none; appearance:none; }
+      [data-schedule-time]::-webkit-date-and-time-value { min-width:0; margin:0; text-align:center; }
+      [data-schedule-time]::-webkit-datetime-edit { display:flex; justify-content:center; min-width:0; padding:0; }
       .primary-actions { gap:8px; margin-top:12px; }
       .primary { flex:1; min-width:0; min-height:38px; border:0; border-radius:13px; padding:10px 7px; display:flex; gap:6px; justify-content:center; align-items:center; font-size:.72rem; font-weight:750; }
       .snooze { background:color-mix(in srgb,#8b5cf6 20%,var(--card-background-color)); color:#c4b5fd; }

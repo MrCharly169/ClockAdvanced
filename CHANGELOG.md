@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 2026.8.1b7 - 2026-08-19
+
+- Split Holiday time into separate weekday and weekend/public-holiday times in setup and options, with automatic migration from the existing non-workday time.
+- Applied the weekend/public-holiday Holiday time on Saturdays, Sundays, and current weekdays reported as non-workdays, while preserving disabled days and normal weekly times when Holiday mode is off.
+- Updated the Advanced Card weekly overview to show both effective Holiday times consistently with the calculated next alarm.
+- Contained and centered the native time input on iPhone/Safari so its dark control no longer overflows to the right.
+
 ## 2026.8.1b6 - 2026-08-19
 
 - Rebuilt the repository and HACS README as an English product page with a synchronized full German edition, verified installation guidance, exact source/state/lifecycle documentation, real anonymized Card and Badge screenshots, lifecycle/source diagrams, and a 1280 × 640 social preview.

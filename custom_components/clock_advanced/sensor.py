@@ -166,6 +166,9 @@ class ClockStatusSensor(ClockAdvancedEntity, SensorEntity):
                 ),
                 "holiday_enabled": self.runtime.schedule.holiday_enabled,
                 "holiday_time": self.runtime.schedule.holiday_time.isoformat(),
+                "holiday_weekend_time": (
+                    self.runtime.schedule.holiday_weekend_time.isoformat()
+                ),
                 "block_non_workdays": bool(
                     self.runtime.config.get(CONF_BLOCK_NON_WORKDAYS, False)
                 ),

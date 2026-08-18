@@ -21,11 +21,14 @@ from .const import (
     CONF_BLOCK_NON_WORKDAYS,
     CONF_BLOCK_STATE,
     CONF_ESCALATE_AFTER_SNOOZES,
+    CONF_HOLIDAY_WEEKEND_TIME,
+    CONF_NON_WORKDAY_TIME,
     CONF_SCHEDULE_SOURCE,
     CONF_START_CONDITIONS,
     DEFAULT_ALLOW_STATE,
     DEFAULT_BLOCK_STATE,
     DEFAULT_ESCALATE_AFTER_SNOOZES,
+    DEFAULT_HOLIDAY_WEEKEND_TIME,
     DEFAULT_SCHEDULE_SOURCE,
     DOMAIN,
     PLATFORMS,
@@ -210,8 +213,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: ClockAdvancedConfigEntr
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate the grouped prototype schedule to the seven-day schema."""
-    if entry.version >= 4:
+    if entry.version >= 5:
         return True
+
+    existing = {**entry.data, **entry.options}
+    holiday_weekend_time = existing.get(
+        CONF_HOLIDAY_WEEKEND_TIME,
+        existing.get(CONF_NON_WORKDAY_TIME, DEFAULT_HOLIDAY_WEEKEND_TIME),
+    )
 
     def migrate(values: dict) -> dict:
         result = dict(values)
@@ -261,12 +270,16 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         result.setdefault(
             CONF_ESCALATE_AFTER_SNOOZES, DEFAULT_ESCALATE_AFTER_SNOOZES
         )
+        result.setdefault(
+            CONF_HOLIDAY_WEEKEND_TIME,
+            holiday_weekend_time,
+        )
         return result
 
     hass.config_entries.async_update_entry(
         entry,
         data=migrate(dict(entry.data)),
         options=migrate(dict(entry.options)) if entry.options else {},
-        version=4,
+        version=5,
     )
     return True

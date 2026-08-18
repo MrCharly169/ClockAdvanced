@@ -21,6 +21,7 @@ class WeeklySchedule:
     days: tuple[DaySchedule, ...]
     holiday_enabled: bool = True
     holiday_time: time = time(7, 30)
+    holiday_weekend_time: time = time(9, 0)
     non_workday_enabled: bool = True
     non_workday_time: time = time(9, 0)
 
@@ -48,6 +49,8 @@ def time_for_date(
     if not day.enabled:
         return None
     if holiday_mode and schedule.holiday_enabled:
+        if non_workday or target_date.weekday() >= 5:
+            return schedule.holiday_weekend_time
         return schedule.holiday_time
     if non_workday and target_date.weekday() < 5 and schedule.non_workday_enabled:
         return schedule.non_workday_time

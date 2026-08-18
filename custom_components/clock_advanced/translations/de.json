@@ -31,12 +31,14 @@
           "friday_enabled": "Freitag aktiviert", "friday_time": "Freitag – Uhrzeit",
           "saturday_enabled": "Samstag aktiviert", "saturday_time": "Samstag – Uhrzeit",
           "sunday_enabled": "Sonntag aktiviert", "sunday_time": "Sonntag – Uhrzeit",
-          "holiday_enabled": "Spätere Ferienzeit verwenden", "holiday_time": "Weckzeit in den Ferien",
+          "holiday_enabled": "Ferienzeit verwenden", "holiday_time": "Ferienzeit – Werktage",
+          "holiday_weekend_time": "Ferienzeit – Wochenende/Feiertage",
           "non_workday_enabled": "Feiertagszeit verwenden", "non_workday_time": "Feiertagszeit"
         },
         "data_description": {
           "holiday_enabled": "Wenn Ferienzeit auf der Card aktiv ist, bleibt der Wecker an und verwendet diese alternative Uhrzeit.",
-          "holiday_time": "Alternative Weckzeit für persönliche Ferien. Urlaub hingegen blockiert den Wecker vollständig.",
+          "holiday_time": "Alternative Weckzeit von Montag bis Freitag, solange der Tag kein Feiertag ist.",
+          "holiday_weekend_time": "Alternative Weckzeit an Samstagen, Sonntagen und Feiertagen. Urlaub hingegen blockiert den Wecker vollständig.",
           "non_workday_enabled": "Verwendet an freien Tagen eine spätere Uhrzeit, sofern ein Arbeitstag-Sensor ausgewählt ist.",
           "non_workday_time": "Alternative Uhrzeit, wenn der Arbeitstag-Sensor Aus meldet."
         }
@@ -203,7 +205,7 @@
       },
       "schedule": {
         "title": "Wochenplan",
-        "description": "Aktiviere jeden Tag einzeln. Ferienzeit bedeutet eine alternative, meist spätere Uhrzeit; Urlaub schaltet den Wecker vollständig aus.",
+        "description": "Aktiviere jeden Tag einzeln. Für die Ferienzeit gibt es getrennte Uhrzeiten für Werktage und für Wochenende/Feiertage; Urlaub schaltet den Wecker vollständig aus.",
         "data": {
           "monday_enabled": "Montag aktiviert", "monday_time": "Montag – Uhrzeit",
           "tuesday_enabled": "Dienstag aktiviert", "tuesday_time": "Dienstag – Uhrzeit",
@@ -212,7 +214,8 @@
           "friday_enabled": "Freitag aktiviert", "friday_time": "Freitag – Uhrzeit",
           "saturday_enabled": "Samstag aktiviert", "saturday_time": "Samstag – Uhrzeit",
           "sunday_enabled": "Sonntag aktiviert", "sunday_time": "Sonntag – Uhrzeit",
-          "holiday_enabled": "Spätere Ferienzeit verwenden", "holiday_time": "Weckzeit in den Ferien",
+          "holiday_enabled": "Ferienzeit verwenden", "holiday_time": "Ferienzeit – Werktage",
+          "holiday_weekend_time": "Ferienzeit – Wochenende/Feiertage",
           "non_workday_enabled": "Feiertagszeit verwenden", "non_workday_time": "Feiertagszeit"
         }
       },

@@ -172,6 +172,7 @@ class PackageTests(unittest.TestCase):
 
     def test_card_weekday_editor_and_native_vacation_are_shipped(self) -> None:
         init = (COMPONENT / "__init__.py").read_text(encoding="utf-8")
+        config_flow = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
         runtime = (COMPONENT / "runtime.py").read_text(encoding="utf-8")
         switch = (COMPONENT / "switch.py").read_text(encoding="utf-8")
         sensor = (COMPONENT / "sensor.py").read_text(encoding="utf-8")
@@ -190,6 +191,10 @@ class PackageTests(unittest.TestCase):
         self.assertIn('data-schedule-time type="time"', frontend)
         self.assertIn('data-action="toggle-vacation"', frontend)
         self.assertIn('"holiday_time": self.runtime.schedule.holiday_time.isoformat()', sensor)
+        self.assertIn('"holiday_weekend_time": (', sensor)
+        self.assertIn("CONF_HOLIDAY_WEEKEND_TIME", runtime)
+        self.assertIn("version=5", init)
+        self.assertIn("VERSION = 5", config_flow)
 
 
 if __name__ == "__main__":

@@ -21,7 +21,7 @@
 
 **A complete, UI-configurable alarm clock for Home Assistant.** Clock Advanced brings the schedule, conditions, actions, snooze behavior, escalation and safe finish of one alarm clock into one integration. It also includes a responsive dashboard Card and a compact Badge.
 
-> **Release channel:** `2026.8.1b6` is the current published beta/prerelease. The latest stable release is `2026.8.0`. Beta releases are intended for testing current features; choose the stable release when you prefer the established baseline.
+> **Release channel:** `2026.8.1b7` is the current published beta/prerelease. The latest stable release is `2026.8.0`. Beta releases are intended for testing current features; choose the stable release when you prefer the established baseline.
 
 ## More than an alarm time
 
@@ -168,7 +168,7 @@ The **Clear override and recalculate** button removes the one-time override, cle
 
 The built-in weekly source stores one enabled flag and one time for each weekday. Disabled days stay disabled even when Holiday Time is on.
 
-- **Holiday Time** keeps the clock enabled and replaces an enabled weekday's normal time with its configured alternative time. It belongs to the internal weekly schedule.
+- **Holiday Time** keeps the clock enabled and replaces normal times with two configurable alternatives: one for Monday–Friday and one for weekends/public holidays. Disabled days remain disabled.
 - An optional **Workday sensor** can apply today's non-workday time when it is off. You can instead configure non-workdays as a complete blocker.
 - **Vacation** is a blocker. The integration-owned Vacation switch, or an explicitly selected external Vacation entity, prevents preparation and alarm start. Turning Vacation on during an active session dismisses that session and runs the normal finish path.
 
@@ -176,8 +176,8 @@ Holiday Time changes *when* an enabled weekly occurrence happens. Vacation decid
 
 ## Card modes
 
-- **Compact** — time, state and the active alarm context in the smallest layout. It hides schedule, lifecycle tracks and the Options menu.
-- **Easy** — the recommended daily view with lifecycle tracks, Snooze/Dismiss when active, and a closed-by-default Options overlay for Skip next, Holiday Time and Vacation.
+- **Compact** — time, state and the active alarm context in the smallest layout. It hides the schedule and Options menu.
+- **Easy** — the recommended daily view with next-alarm context, Snooze/Dismiss when active, and a closed-by-default Options overlay for Skip next, Holiday Time and Vacation.
 - **Advanced** — Easy plus the seven-day schedule, five-minute slider, exact time input, day enable control and technical condition/safety details inside Options.
 
 `easy` is the default. Legacy `auto` and `standard` values render as Easy; legacy `kiosk` renders as Advanced. `language` accepts `auto`, `en` or `de`. The Card is theme-aware, respects reduced-motion preferences, supports Sections grid sizing and uses stable DOM nodes so countdown updates do not intentionally replace controls or request scrolling.

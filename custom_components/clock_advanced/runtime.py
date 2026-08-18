@@ -35,6 +35,7 @@ from .const import (
     CONF_ESCALATE_AFTER_SNOOZES,
     CONF_HOLIDAY_ENABLED,
     CONF_HOLIDAY_TIME,
+    CONF_HOLIDAY_WEEKEND_TIME,
     CONF_MAX_SNOOZES,
     CONF_NON_WORKDAY_ENABLED,
     CONF_NON_WORKDAY_TIME,
@@ -59,6 +60,7 @@ from .const import (
     DEFAULT_ALLOW_STATE,
     DEFAULT_BLOCK_STATE,
     DEFAULT_HOLIDAY_TIME,
+    DEFAULT_HOLIDAY_WEEKEND_TIME,
     DEFAULT_MAX_SNOOZES,
     DEFAULT_NON_WORKDAY_TIME,
     DEFAULT_NOTIFICATION_EVENTS,
@@ -191,6 +193,12 @@ class ClockRuntime:
             tuple(days),
             holiday_enabled=bool(config.get(CONF_HOLIDAY_ENABLED, True)),
             holiday_time=parse_time(config.get(CONF_HOLIDAY_TIME, DEFAULT_HOLIDAY_TIME)),
+            holiday_weekend_time=parse_time(
+                config.get(
+                    CONF_HOLIDAY_WEEKEND_TIME,
+                    config.get(CONF_NON_WORKDAY_TIME, DEFAULT_HOLIDAY_WEEKEND_TIME),
+                )
+            ),
             non_workday_enabled=bool(config.get(CONF_NON_WORKDAY_ENABLED, True)),
             non_workday_time=parse_time(
                 config.get(CONF_NON_WORKDAY_TIME, DEFAULT_NON_WORKDAY_TIME)

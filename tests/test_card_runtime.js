@@ -232,7 +232,12 @@ global.document = {
       ...rapidAttrs,
       schedule: weeklySchedule,
       schedule_source: "weekly",
-      settings: { ...rapidAttrs.settings, holiday_enabled: true, holiday_time: "06:00:00" },
+      settings: {
+        ...rapidAttrs.settings,
+        holiday_enabled: true,
+        holiday_time: "06:00:00",
+        holiday_weekend_time: "08:30:00",
+      },
     } },
     "switch.clock_holiday": { state: "on", attributes: {} },
     "switch.clock_vacation": { state: "off", attributes: {} },
@@ -240,6 +245,20 @@ global.document = {
   const mondayTime = instance.shadowRoot.querySelector('[data-day="0"]').children[1];
   if (mondayTime.textContent !== "06:00" || !instance.shadowRoot.querySelector("[data-schedule]").classList.contains("holiday-active")) {
     throw new Error("Holiday mode did not update the effective weekly overview times");
+  }
+  const sundayTime = instance.shadowRoot.querySelector('[data-day="6"]').children[1];
+  if (sundayTime.textContent !== "08:30") {
+    throw new Error("Holiday mode did not use the separate weekend and public-holiday time");
+  }
+  instance.hass = { ...instance._hass, states: {
+    ...instance._hass.states,
+    "switch.clock_holiday": { state: "off", attributes: {} },
+  } };
+  if (mondayTime.textContent !== "06:30" || sundayTime.textContent !== "06:30") {
+    throw new Error("Disabling Holiday mode did not restore the normal weekly times");
+  }
+  if (!source.includes("::-webkit-date-and-time-value") || !source.includes("max-inline-size:100%")) {
+    throw new Error("The iPhone time input containment and centering styles are missing");
   }
   const tuesdayButton = instance.shadowRoot.querySelector('[data-day="1"]');
   tuesdayButton.dataset.action = "select-day";

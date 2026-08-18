@@ -95,6 +95,12 @@ try {
   if (wizard.step_id !== "source") throw new Error(`Expected source, got ${wizard.step_id}`);
   wizard = await submitFlow(wizard, { schedule_source: "weekly" });
   if (wizard.step_id !== "schedule") throw new Error(`Expected schedule, got ${wizard.step_id}`);
+  const wizardScheduleFields = wizard.data_schema.map((field) => field.name);
+  for (const field of ["holiday_time", "holiday_weekend_time"]) {
+    if (!wizardScheduleFields.includes(field)) {
+      throw new Error(`The setup schedule is missing ${field}`);
+    }
+  }
   wizard = await submitFlow(wizard, defaults(wizard));
   if (wizard.step_id !== "guards") throw new Error(`Expected guards, got ${wizard.step_id}`);
   wizard = await submitFlow(wizard, defaults(wizard));
@@ -154,6 +160,26 @@ try {
   for (const field of ["name", "schedule_source", "schedule_entity"]) {
     if (!sourceFields.includes(field)) {
       throw new Error(`The general options section is missing ${field}`);
+    }
+  }
+
+  const scheduleFlow = await request(`${baseUrl}/api/config/config_entries/options/flow`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ handler: entry.entry_id }),
+  });
+  const scheduleStep = await request(
+    `${baseUrl}/api/config/config_entries/options/flow/${scheduleFlow.flow_id}`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ next_step_id: "schedule" }),
+    },
+  );
+  const scheduleFields = scheduleStep.data_schema.map((field) => field.name);
+  for (const field of ["holiday_time", "holiday_weekend_time"]) {
+    if (!scheduleFields.includes(field)) {
+      throw new Error(`The schedule options section is missing ${field}`);
     }
   }
 

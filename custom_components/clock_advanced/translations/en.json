@@ -31,12 +31,14 @@
           "friday_enabled": "Friday enabled", "friday_time": "Friday time",
           "saturday_enabled": "Saturday enabled", "saturday_time": "Saturday time",
           "sunday_enabled": "Sunday enabled", "sunday_time": "Sunday time",
-          "holiday_enabled": "Use a later Holiday time", "holiday_time": "Alarm time during holidays",
+          "holiday_enabled": "Use Holiday time", "holiday_time": "Holiday time – weekdays",
+          "holiday_weekend_time": "Holiday time – weekends/public holidays",
           "non_workday_enabled": "Use non-workday time", "non_workday_time": "Non-workday time"
         },
         "data_description": {
           "holiday_enabled": "When Holiday time is active on the Card, the alarm stays enabled and uses this alternative time.",
-          "holiday_time": "Alternative time for personal holidays. Vacation blocks the alarm completely instead.",
+          "holiday_time": "Alternative time from Monday to Friday when the day is not a public holiday.",
+          "holiday_weekend_time": "Alternative time on Saturdays, Sundays, and public holidays. Vacation blocks the alarm completely instead.",
           "non_workday_enabled": "Uses a later time on days off when a workday sensor is selected.",
           "non_workday_time": "Alternative time when the workday sensor reports off."
         }
@@ -204,7 +206,7 @@
       },
       "schedule": {
         "title": "Weekly schedule",
-        "description": "Enable days independently. Holiday time means an alternative, usually later time; Vacation turns the alarm off completely.",
+        "description": "Enable days independently. Holiday time has separate weekday and weekend/public-holiday times; Vacation turns the alarm off completely.",
         "data": {
           "monday_enabled": "Monday enabled", "monday_time": "Monday time",
           "tuesday_enabled": "Tuesday enabled", "tuesday_time": "Tuesday time",
@@ -213,7 +215,8 @@
           "friday_enabled": "Friday enabled", "friday_time": "Friday time",
           "saturday_enabled": "Saturday enabled", "saturday_time": "Saturday time",
           "sunday_enabled": "Sunday enabled", "sunday_time": "Sunday time",
-          "holiday_enabled": "Use a later Holiday time", "holiday_time": "Alarm time during holidays",
+          "holiday_enabled": "Use Holiday time", "holiday_time": "Holiday time – weekdays",
+          "holiday_weekend_time": "Holiday time – weekends/public holidays",
           "non_workday_enabled": "Use non-workday time", "non_workday_time": "Non-workday time"
         }
       },

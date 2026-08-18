@@ -23,6 +23,7 @@ from .const import (
     CONF_ESCALATE_AFTER_SNOOZES,
     CONF_HOLIDAY_ENABLED,
     CONF_HOLIDAY_TIME,
+    CONF_HOLIDAY_WEEKEND_TIME,
     CONF_MAX_SNOOZES,
     CONF_NAME,
     CONF_NON_WORKDAY_ENABLED,
@@ -48,6 +49,7 @@ from .const import (
     DEFAULT_ALLOW_STATE,
     DEFAULT_BLOCK_STATE,
     DEFAULT_HOLIDAY_TIME,
+    DEFAULT_HOLIDAY_WEEKEND_TIME,
     DEFAULT_MAX_SNOOZES,
     DEFAULT_NAME,
     DEFAULT_NON_WORKDAY_TIME,
@@ -126,6 +128,9 @@ def _schedule_schema() -> vol.Schema:
         {
             vol.Required(CONF_HOLIDAY_ENABLED, default=True): selector.BooleanSelector(),
             vol.Required(CONF_HOLIDAY_TIME, default=DEFAULT_HOLIDAY_TIME): selector.TimeSelector(),
+            vol.Required(
+                CONF_HOLIDAY_WEEKEND_TIME, default=DEFAULT_HOLIDAY_WEEKEND_TIME
+            ): selector.TimeSelector(),
             vol.Required(CONF_NON_WORKDAY_ENABLED, default=True): selector.BooleanSelector(),
             vol.Required(
                 CONF_NON_WORKDAY_TIME, default=DEFAULT_NON_WORKDAY_TIME
@@ -266,7 +271,7 @@ def _notifications_schema() -> vol.Schema:
 class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Create a generic advanced clock through a guided wizard."""
 
-    VERSION = 4
+    VERSION = 5
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}

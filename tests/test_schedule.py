@@ -34,6 +34,7 @@ class ScheduleTests(unittest.TestCase):
             ),
             holiday_enabled=True,
             holiday_time=time(7, 30),
+            holiday_weekend_time=time(9, 30),
             non_workday_enabled=True,
             non_workday_time=time(9, 0),
         )
@@ -51,12 +52,29 @@ class ScheduleTests(unittest.TestCase):
             datetime.fromisoformat("2026-08-16T08:30:00+02:00"),
         )
 
-    def test_holiday_override_respects_disabled_day(self) -> None:
+    def test_holiday_override_separates_weekdays_and_weekends(self) -> None:
+        monday = datetime(2026, 8, 10).date()
         saturday = datetime(2026, 8, 15).date()
         sunday = datetime(2026, 8, 16).date()
+        self.assertEqual(
+            time_for_date(monday, self.schedule, holiday_mode=True), time(7, 30)
+        )
         self.assertIsNone(time_for_date(saturday, self.schedule, holiday_mode=True))
         self.assertEqual(
-            time_for_date(sunday, self.schedule, holiday_mode=True), time(7, 30)
+            time_for_date(sunday, self.schedule, holiday_mode=True), time(9, 30)
+        )
+        self.assertEqual(
+            time_for_date(
+                monday, self.schedule, holiday_mode=True, non_workday=True
+            ),
+            time(9, 30),
+        )
+
+    def test_holiday_weekend_time_is_used_for_next_weekend_occurrence(self) -> None:
+        now = datetime.fromisoformat("2026-08-14T23:00:00+02:00")
+        self.assertEqual(
+            next_alarm_after(now, self.schedule, holiday_mode=True),
+            datetime.fromisoformat("2026-08-16T09:30:00+02:00"),
         )
 
     def test_non_workday_override_is_only_applied_to_today(self) -> None:
