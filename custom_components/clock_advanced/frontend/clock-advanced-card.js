@@ -1167,8 +1167,8 @@ class ClockAdvancedBadgeEditor extends HTMLElement {
     const de = String(this._hass?.language || "en").toLowerCase().startsWith("de");
     this.shadowRoot.innerHTML = `<ha-form></ha-form>
       <div class="help">${de
-        ? "Das Hauptsymbol bleibt immer der Wecker. Die kleine Zusatzmarkierung und die Farbe zeigen den aktuellen Zustand. Anklicken öffnet alle Alarmdetails."
-        : "The main symbol always remains the alarm clock. The small marker and color show the current state. Select it to open all alarm details."}</div>
+        ? "Das Hauptsymbol bleibt immer der Wecker. Die kleine Zusatzmarkierung und die Farbe zeigen den aktuellen Zustand. Anklicken öffnet alle Alarmdetails. Sichtbarkeit und Zustandsbedingungen werden ausschließlich im nativen Sichtbarkeit-Tab von Home Assistant konfiguriert."
+        : "The main symbol always remains the alarm clock. The small marker and color show the current state. Select it to open all alarm details. Configure visibility and state conditions only in Home Assistant's native Visibility tab."}</div>
       <style>:host{display:block;padding:4px 0}.help{margin-top:12px;font-size:11px;line-height:1.4;color:var(--secondary-text-color)}</style>`;
     const form = this.shadowRoot.querySelector?.("ha-form");
     if (!form) return;
