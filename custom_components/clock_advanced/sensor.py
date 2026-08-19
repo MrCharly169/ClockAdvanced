@@ -134,8 +134,8 @@ class ClockStatusSensor(ClockAdvancedEntity, SensorEntity):
                 "mode: easy\nlanguage: auto\n"
             ),
             "badge_yaml": (
-                f"type: entity\nentity: {self.entity_id}\n"
-                "show_name: false\nshow_icon: true\nshow_state: true\ncolor: state\n"
+                f"type: custom:clock-advanced-badge\nentity: {self.entity_id}\n"
+                "tap_action:\n  action: more-info\n"
             ),
             "name": self.runtime.entry.title,
             "next_alarm": (

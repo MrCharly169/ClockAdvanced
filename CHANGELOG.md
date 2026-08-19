@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 2026.8.3b0 - 2026-08-19
+
+- Restored the Clock Advanced Custom Badge so the clock logo, state marker and
+  semantic color can change together.
+- Delegated tap actions through Home Assistant's `hass-action` contract and
+  retained native Interactions and Visibility configuration.
+- Ensured the native entity form preserves action and visibility configuration.
+- Adopted Home Assistant ecosystem policy 1.1 for the shared hybrid Badge contract.
+
 - Adopted the shared MeyersHaff Home Assistant ecosystem policy v1 and its
   repository guard, so HA-wide integration contracts remain documented and
   testable in this project.

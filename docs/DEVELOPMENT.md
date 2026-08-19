@@ -17,7 +17,7 @@ The lab uses Home Assistant storage mode, so **Edit dashboard** and the graphica
 powershell -ExecutionPolicy Bypass -File .\scripts\dev.ps1 seed
 ```
 
-Its **Clock Lab** view renders the native Badge, a weekly Advanced card, a Schedule-entity Easy card, and native controls. The **Card modes** view contains only Compact, Easy, and Advanced. **Render stability** places Card and Badge together in a deliberately tall, scrollable Sections view for `scrollTop`, focus, countdown and DOM-identity checks. Run the non-destructive live checks with:
+Its **Clock Lab** view renders the hybrid Custom Badge, a weekly Advanced card, a Schedule-entity Easy card, and native controls. The **Card modes** view contains only Compact, Easy, and Advanced. **Render stability** places Card and Badge together in a deliberately tall, scrollable Sections view for `scrollTop`, focus, countdown and DOM-identity checks. Run the non-destructive live checks with:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\dev.ps1 smoke
