@@ -17,4 +17,4 @@ node tests/test_card_runtime.js
 python scripts/build_release.py --check
 ```
 
-Beta versions use `YYYY.M.PATCHbN`; stable versions use `YYYY.M.PATCH`. Release preparation and publication remain separate maintainer actions. Review version, changelog, documentation, tests and migration impact before tagging.
+Beta versions use `YYYY.M.PATCHbN`; stable versions use `YYYY.M.PATCH`. `PATCH` identifies one coherent customer outcome or problem bundle. A new bundle increments `PATCH` and starts at `b0`; only corrections to that same bundle increment `N`. Promote a completed bundle to `YYYY.M.PATCH` before starting the next one. Beta candidates are capped at `b9`; reaching the cap requires closing or rescoping the bundle rather than creating `b10`. A new calendar month starts at patch `.0b0`. Release preparation and publication remain separate maintainer actions. Review version, changelog, documentation, tests and migration impact before tagging.
