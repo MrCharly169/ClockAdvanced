@@ -111,7 +111,7 @@ Die URL ist absichtlich dauerhaft und enthält keinen Versionsparameter. Das Int
 
 ### Card und Badge hinzufügen
 
-Wähle in von Home Assistant verwalteten Dashboards **Dashboard bearbeiten → Karte hinzufügen → Clock Advanced** beziehungsweise **Badge hinzufügen → Clock Advanced**. YAML-Dashboards können dieselben Definitionen verwenden, bieten aber nicht den grafischen Home-Assistant-Editor.
+Wähle in von Home Assistant verwalteten Dashboards **Dashboard bearbeiten → Karte hinzufügen → Clock Advanced** für die Card beziehungsweise **Badge hinzufügen → Entität** für das native Status-Badge. YAML-Dashboards können dieselben Definitionen verwenden, bieten aber nicht den grafischen Home-Assistant-Editor.
 
 Minimale Easy-Card:
 
@@ -125,12 +125,15 @@ language: auto
 Minimales Badge:
 
 ```yaml
-type: custom:clock-advanced-badge
+type: entity
 entity: sensor.advanced_alarm_clock_status
-language: auto
+show_name: false
+show_icon: true
+show_state: true
+color: state
 ```
 
-Verwende den tatsächlichen Statussensor deines Config Entry. Die einmalige Einrichtungsbenachrichtigung enthält beide kopierfertigen Definitionen mit der richtigen Entity-ID.
+Verwende den tatsächlichen Statussensor deines Config Entry. Clock Advanced liefert Enum-Status und zustandsabhängiges Symbol; die bedingte Anzeige wird ausschließlich im nativen Sichtbarkeit-Tab konfiguriert. Die einmalige Einrichtungsbenachrichtigung enthält beide kopierfertigen Definitionen mit der richtigen Entity-ID.
 
 ## Der Einrichtungsassistent
 

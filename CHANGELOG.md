@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 2026.8.2b0 - 2026-08-19
+
+- Switched recommended dashboard badges to Home Assistant's native Entity Badge.
+- Added a state-dependent icon to the native enum status sensor for every alarm lifecycle state.
+- Kept conditional display entirely in Home Assistant's native Visibility tab.
+- Bounded future beta trains to b0 through b9; a new completed scope increments the CalVer patch and restarts at b0.
+
 ## 2026.8.1b10 - 2026-08-19
 
 - Clarified in the Badge editor that visibility and lifecycle-state conditions belong exclusively in Home Assistant's native Visibility tab.

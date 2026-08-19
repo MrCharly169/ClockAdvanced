@@ -18,6 +18,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Validate bounded release version
+        shell: bash
+        run: |
+          VERSION="$(python -c 'import json; print(json.load(open("custom_components/clock_advanced/manifest.json"))["version"])')"
+          if [[ ! "$VERSION" =~ ^20[0-9]{2}\.([1-9]|1[0-2])\.[0-9]+(b[0-9])?$ ]]; then
+            echo "::error::Version must be YYYY.M.PATCH or a bounded beta YYYY.M.PATCHb0..b9."
+            exit 1
+          fi
+          if [[ "${{ github.ref_name }}" != "v$VERSION" ]]; then
+            echo "::error::Tag must equal v$VERSION."
+            exit 1
+          fi
       - run: python -m unittest discover -s tests -v
       - run: node tests/test_card_runtime.js
       - run: python scripts/build_release.py --tag "${{ github.ref_name }}"

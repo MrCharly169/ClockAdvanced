@@ -167,9 +167,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ClockAdvancedConfigEntry
                 "language: auto\n"
             )
             badge_yaml = (
-                "type: custom:clock-advanced-badge\n"
+                "type: entity\n"
                 f"entity: {entity_id}\n"
-                "language: auto\n"
+                "show_name: false\n"
+                "show_icon: true\n"
+                "show_state: true\n"
+                "color: state\n"
             )
             title = (
                 f"Clock Advanced – Dashboard für {entry.title}"
