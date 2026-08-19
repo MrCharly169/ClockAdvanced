@@ -167,12 +167,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ClockAdvancedConfigEntry
                 "language: auto\n"
             )
             badge_yaml = (
-                "type: entity\n"
+                "type: custom:clock-advanced-badge\n"
                 f"entity: {entity_id}\n"
-                "show_name: false\n"
-                "show_icon: true\n"
-                "show_state: true\n"
-                "color: state\n"
+                "tap_action:\n"
+                "  action: more-info\n"
             )
             title = (
                 f"Clock Advanced – Dashboard für {entry.title}"
@@ -188,7 +186,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ClockAdvancedConfigEntry
                     "**Kleiner runder Home-Assistant-Badge:**\n\n"
                     f"```yaml\n{badge_yaml}```\n\n"
                     "**Einfügen:** Dashboard bearbeiten → Karte beziehungsweise Badge "
-                    "hinzufügen → Clock Advanced auswählen. Alternativ unter „Manuell“ "
+                    "hinzufügen → Clock Advanced auswählen. Navigation unter "
+                    "Interaktionen und Bedingungen unter Sichtbarkeit konfigurieren. "
+                    "Alternativ unter „Manuell“ "
                     "den Code einfügen.\n\n"
                     f"Falls Clock Advanced im Auswahldialog noch fehlt, unter "
                     f"Einstellungen → Dashboards → Ressourcen `{CARD_RESOURCE}` einmalig "
@@ -206,7 +206,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ClockAdvancedConfigEntry
                     "**Small round Home Assistant badge:**\n\n"
                     f"```yaml\n{badge_yaml}```\n\n"
                     "**Add it:** Edit dashboard → Add card or badge → select Clock "
-                    "Advanced. Alternatively paste the code under Manual.\n\n"
+                    "Advanced. Configure navigation under Interactions and conditions "
+                    "under Visibility. Alternatively paste the code under Manual.\n\n"
                     f"If Clock Advanced is not available in the picker yet, register "
                     f"`{CARD_RESOURCE}` once as a JavaScript module under Settings → "
                     "Dashboards → Resources.\n\n"

@@ -343,8 +343,13 @@ global.document = {
   if (registration.getEntitySuggestion(hass, "sensor.other") !== null) throw new Error("Unsupported entity was suggested");
   const badgeStub = Badge.getStubConfig(hass);
   if (badgeStub.entity !== "sensor.clock_status") throw new Error("Badge stub did not discover the status entity");
+  if (badgeStub.tap_action?.action !== "more-info") throw new Error("Badge stub did not provide a native default interaction");
   const badge = new Badge();
-  badge.setConfig(badgeStub);
+  badge.setConfig({
+    ...badgeStub,
+    tap_action: { action: "navigate", navigation_path: "/lovelace/clock" },
+    visibility: [{ condition: "state", entity: "sensor.clock_status", state: "scheduled" }],
+  });
   badge.hass = hass;
   const badgeRoot = badge.shadowRoot.querySelector("ha-badge");
   const badgeMarker = badge.shadowRoot.querySelector("[data-state-icon]");
@@ -353,7 +358,11 @@ global.document = {
     || !badgeRoot.getAttribute("title").includes("Bedroom clock")
     || !badgeRoot.getAttribute("title").includes("Next alarm")) throw new Error("Badge lost its native Clock identity, state marker, or next alarm detail");
   badgeRoot.listeners.get("click")?.(new Event("click"));
-  if (badge.dispatchedEvents.at(-1)?.detail?.entityId !== "sensor.clock_status") throw new Error("Badge did not open the native entity details");
+  if (badge.dispatchedEvents.at(-1)?.type !== "hass-action"
+    || badge.dispatchedEvents.at(-1)?.detail?.action !== "tap"
+    || badge.dispatchedEvents.at(-1)?.detail?.config?.entity !== "sensor.clock_status"
+    || badge.dispatchedEvents.at(-1)?.detail?.config?.tap_action?.action !== "navigate"
+    || badge.dispatchedEvents.at(-1)?.detail?.config?.visibility?.[0]?.state !== "scheduled") throw new Error("Badge did not preserve and delegate native action/Visibility config");
   const renderCount = badge.shadowRoot.writeCount;
   let badgePatchCount = 0;
   const originalBadgePatch = badge._patch.bind(badge);
@@ -408,8 +417,7 @@ global.document = {
   const badgeEditor = new (registry.get("clock-advanced-badge-editor"))();
   badgeEditor.setConfig(badgeStub);
   badgeEditor.hass = hass;
-  if (!badgeEditor.shadowRoot.innerHTML.includes("The main symbol always remains the alarm clock")) throw new Error("Badge editor did not explain the stable alarm symbol and state marker");
-  if (!badgeEditor.shadowRoot.innerHTML.includes("native Visibility tab")) throw new Error("Badge editor did not delegate visibility to Home Assistant");
+  if (!badgeEditor.shadowRoot.innerHTML.includes("native editors")) throw new Error("Badge editor did not delegate entity, interaction and visibility configuration");
   if (!window.customBadges?.some((item) => item.type === "clock-advanced-badge")) throw new Error("Badge picker registration missing");
   if (!source.includes('{ value: "compact"') || !source.includes('{ value: "easy"') || !source.includes('{ value: "advanced"')) throw new Error("Compact, Easy, and Advanced modes are not available");
   console.log("Clock Advanced Card runtime contract valid");

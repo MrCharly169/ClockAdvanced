@@ -111,7 +111,7 @@ The URL is intentionally permanent and has no version query. The integration man
 
 ### Add the Card and Badge
 
-For dashboards managed by Home Assistant, choose **Edit dashboard → Add card → Clock Advanced** for the Card or **Add badge → Entity** for the native status Badge. YAML-mode dashboards can use the same definitions but do not provide Home Assistant's graphical editor.
+For dashboards managed by Home Assistant, choose **Edit dashboard → Add card → Clock Advanced** for the Card or **Add badge → Clock Advanced** for the Custom Badge. YAML-mode dashboards can use the same definitions but do not provide Home Assistant's graphical editor.
 
 Minimal Easy Card:
 
@@ -125,15 +125,13 @@ language: auto
 Minimal Badge:
 
 ```yaml
-type: entity
+type: custom:clock-advanced-badge
 entity: sensor.advanced_alarm_clock_status
-show_name: false
-show_icon: true
-show_state: true
-color: state
+tap_action:
+  action: more-info
 ```
 
-Use the actual status sensor created for your config entry. Clock Advanced supplies its enum state and state-dependent icon; configure conditional display only through Home Assistant's native Visibility tab. The once-only onboarding notification includes both ready-to-copy definitions with the correct entity ID.
+Use the actual status sensor created for your config entry. The Custom Badge combines the clock logo, state marker and semantic color. Configure navigation in Home Assistant's native Interactions tab and conditional display only in Visibility; the Badge has no separate navigation, hidden or state controls. The once-only onboarding notification includes both ready-to-copy definitions with the correct entity ID.
 
 ## The setup wizard
 
@@ -187,7 +185,7 @@ Holiday Time changes *when* an enabled weekly occurrence happens. Vacation decid
 
 ## Clock Advanced Badge
 
-The bundled Badge uses Home Assistant's small native `ha-badge` geometry. The alarm-clock symbol always remains visible; a smaller marker and semantic theme color communicate the current lifecycle state. Its tooltip and accessible name include the state and relevant alarm timing. Mouse, Enter or Space opens the status sensor's normal More info dialog.
+The bundled Custom Badge uses Home Assistant's small native `ha-badge` geometry. The alarm-clock symbol always remains visible; a smaller marker and semantic theme color communicate the current lifecycle state. Its tooltip and accessible name include the state and relevant alarm timing. Mouse, Enter or Space executes the tap action configured in Home Assistant's native Interactions tab; More info is the default.
 
 ## Alarm lifecycle
 

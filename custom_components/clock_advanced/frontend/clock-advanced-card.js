@@ -961,14 +961,18 @@ class ClockAdvancedBadge extends HTMLElement {
   static getStubConfig(hass) {
     const entity = Object.keys(hass?.states || {}).find((entityId) =>
       hass.states[entityId]?.attributes?.card_contract === 1);
-    return { entity: entity || "sensor.clock_advanced_status", language: "auto" };
+    return {
+      entity: entity || "sensor.clock_advanced_status",
+      language: "auto",
+      tap_action: { action: "more-info" },
+    };
   }
 
   setConfig(config) {
     if (!config?.entity || !String(config.entity).startsWith("sensor.")) {
       throw new Error("Clock Advanced badge requires its status sensor entity");
     }
-    this._config = { language: "auto", ...config };
+    this._config = { language: "auto", tap_action: { action: "more-info" }, ...config };
     this._lastRenderSignature = "";
     this._ensureStructure();
     this._patch();
@@ -999,13 +1003,13 @@ class ClockAdvancedBadge extends HTMLElement {
     this._patch();
   }
 
-  _openMoreInfo() {
+  _performNativeTapAction() {
     const entityId = String(this._config.entity || "");
     if (!entityId) return;
-    this.dispatchEvent(new CustomEvent("hass-more-info", {
+    this.dispatchEvent(new CustomEvent("hass-action", {
       bubbles: true,
       composed: true,
-      detail: { entityId },
+      detail: { action: "tap", config: { ...this._config, entity: entityId } },
     }));
   }
 
@@ -1015,12 +1019,12 @@ class ClockAdvancedBadge extends HTMLElement {
     this._interactionBound = true;
     badge.addEventListener?.("click", (event) => {
       event.stopPropagation?.();
-      this._openMoreInfo();
+      this._performNativeTapAction();
     });
     badge.addEventListener?.("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault?.();
-      this._openMoreInfo();
+      this._performNativeTapAction();
     });
   }
 
@@ -1167,8 +1171,8 @@ class ClockAdvancedBadgeEditor extends HTMLElement {
     const de = String(this._hass?.language || "en").toLowerCase().startsWith("de");
     this.shadowRoot.innerHTML = `<ha-form></ha-form>
       <div class="help">${de
-        ? "Das Hauptsymbol bleibt immer der Wecker. Die kleine Zusatzmarkierung und die Farbe zeigen den aktuellen Zustand. Anklicken öffnet alle Alarmdetails. Sichtbarkeit und Zustandsbedingungen werden ausschließlich im nativen Sichtbarkeit-Tab von Home Assistant konfiguriert."
-        : "The main symbol always remains the alarm clock. The small marker and color show the current state. Select it to open all alarm details. Configure visibility and state conditions only in Home Assistant's native Visibility tab."}</div>
+        ? "Das Weckerlogo, Zusatzsymbol und die Farbe folgen dem Zustand. Entität, Interaktion und Sichtbarkeit werden mit Home Assistants nativen Editoren konfiguriert; dieses Badge besitzt keine eigenen Navigate-, Hidden- oder Zustandslisten."
+        : "The clock logo, marker and color follow the state. Configure the entity, interaction and visibility with Home Assistant's native editors; this Badge has no separate Navigate, Hidden or state lists."}</div>
       <style>:host{display:block;padding:4px 0}.help{margin-top:12px;font-size:11px;line-height:1.4;color:var(--secondary-text-color)}</style>`;
     const form = this.shadowRoot.querySelector?.("ha-form");
     if (!form) return;
@@ -1188,7 +1192,7 @@ class ClockAdvancedBadgeEditor extends HTMLElement {
       language: de ? "Sprache" : "Language",
     }[schema.name] || schema.name);
     form.addEventListener("value-changed", (event) => {
-      this._config = { ...event.detail.value };
+      this._config = { ...this._config, ...(event.detail?.value || {}) };
       this.dispatchEvent(new CustomEvent("config-changed", {
         detail: { config: { ...this._config } }, bubbles: true, composed: true,
       }));

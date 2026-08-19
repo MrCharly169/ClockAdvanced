@@ -111,7 +111,7 @@ Die URL ist absichtlich dauerhaft und enthält keinen Versionsparameter. Das Int
 
 ### Card und Badge hinzufügen
 
-Wähle in von Home Assistant verwalteten Dashboards **Dashboard bearbeiten → Karte hinzufügen → Clock Advanced** für die Card beziehungsweise **Badge hinzufügen → Entität** für das native Status-Badge. YAML-Dashboards können dieselben Definitionen verwenden, bieten aber nicht den grafischen Home-Assistant-Editor.
+Wähle in von Home Assistant verwalteten Dashboards **Dashboard bearbeiten → Karte hinzufügen → Clock Advanced** für die Card beziehungsweise **Badge hinzufügen → Clock Advanced** für das Custom Badge. YAML-Dashboards können dieselben Definitionen verwenden, bieten aber nicht den grafischen Home-Assistant-Editor.
 
 Minimale Easy-Card:
 
@@ -125,15 +125,13 @@ language: auto
 Minimales Badge:
 
 ```yaml
-type: entity
+type: custom:clock-advanced-badge
 entity: sensor.advanced_alarm_clock_status
-show_name: false
-show_icon: true
-show_state: true
-color: state
+tap_action:
+  action: more-info
 ```
 
-Verwende den tatsächlichen Statussensor deines Config Entry. Clock Advanced liefert Enum-Status und zustandsabhängiges Symbol; die bedingte Anzeige wird ausschließlich im nativen Sichtbarkeit-Tab konfiguriert. Die einmalige Einrichtungsbenachrichtigung enthält beide kopierfertigen Definitionen mit der richtigen Entity-ID.
+Verwende den tatsächlichen Statussensor deines Config Entry. Das Custom Badge kombiniert Weckerlogo, Zustandsmarker und semantische Farbe. Navigation wird im nativen Tab Interaktionen und die bedingte Anzeige ausschließlich unter Sichtbarkeit konfiguriert; das Badge besitzt keine eigenen Navigate-, Hidden- oder Zustandsfelder. Die einmalige Einrichtungsbenachrichtigung enthält beide kopierfertigen Definitionen mit der richtigen Entity-ID.
 
 ## Der Einrichtungsassistent
 
@@ -187,7 +185,7 @@ Ferienzeit verändert, *wann* ein aktivierter wöchentlicher Termin stattfindet.
 
 ## Clock-Advanced-Badge
 
-Das gebündelte Badge verwendet die kleine native `ha-badge`-Geometrie von Home Assistant. Das Weckersymbol bleibt immer sichtbar; eine kleinere Markierung und eine semantische Theme-Farbe zeigen den aktuellen Lebenszykluszustand. Tooltip und Barrierefreiheitsname enthalten Zustand und passenden Zeitkontext. Maus, Enter oder Leertaste öffnen den normalen Mehr-Info-Dialog des Statussensors.
+Das gebündelte Custom Badge verwendet die kleine native `ha-badge`-Geometrie von Home Assistant. Das Weckersymbol bleibt immer sichtbar; eine kleinere Markierung und eine semantische Theme-Farbe zeigen den aktuellen Lebenszykluszustand. Tooltip und Barrierefreiheitsname enthalten Zustand und passenden Zeitkontext. Maus, Enter oder Leertaste führen die im nativen Tab Interaktionen konfigurierte Tipp-Aktion aus; Mehr Info ist Standard.
 
 ## Weck-Lebenszyklus
 
