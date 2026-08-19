@@ -21,7 +21,7 @@
 
 **A complete, UI-configurable alarm clock for Home Assistant.** Clock Advanced brings the schedule, conditions, actions, snooze behavior, escalation and safe finish of one alarm clock into one integration. It also includes a responsive dashboard Card and a compact Badge.
 
-> **Release channel:** `2026.8.1b7` is the current published beta/prerelease. The latest stable release is `2026.8.0`. Beta releases are intended for testing current features; choose the stable release when you prefer the established baseline.
+> **Release channel:** `2026.8.1b8` is the current published beta/prerelease. The latest stable release is `2026.8.0`. Beta releases are intended for testing current features; choose the stable release when you prefer the established baseline.
 
 ## More than an alarm time
 
@@ -147,7 +147,7 @@ The wizard follows the customer journey in ten small decisions:
 9. **Finish and safety** — Dismiss, Timeout and Cleanup actions.
 10. **Review** — a final summary and explicit confirmation.
 
-Every section remains editable later through **Settings → Devices & services → Clock Advanced → Configure**. Saving an options section reloads only that config entry. Advanced Card weekday edits use the integration's own service and recalculate without reloading the entry.
+Every section remains editable later through **Settings → Devices & services → Clock Advanced → Configure**. Saving an options section reloads only that config entry. Advanced Card weekday and Holiday Time edits use the integration's own services and recalculate without reloading the entry.
 
 ## Alarm sources and exact priority
 
@@ -178,7 +178,7 @@ Holiday Time changes *when* an enabled weekly occurrence happens. Vacation decid
 
 - **Compact** — time, state and the active alarm context in the smallest layout. It hides the schedule and Options menu.
 - **Easy** — the recommended daily view with next-alarm context, Snooze/Dismiss when active, and a closed-by-default Options overlay for Skip next, Holiday Time and Vacation.
-- **Advanced** — Easy plus the seven-day schedule, five-minute slider, exact time input, day enable control and technical condition/safety details inside Options.
+- **Advanced** — Easy plus the seven-day schedule, five-minute slider, exact time input, day enable control and technical condition/safety details inside Options. The selected day is marked in yellow; the editor follows its effective normal or Holiday Time.
 
 `easy` is the default. Legacy `auto` and `standard` values render as Easy; legacy `kiosk` renders as Advanced. `language` accepts `auto`, `en` or `de`. The Card is theme-aware, respects reduced-motion preferences, supports Sections grid sizing and uses stable DOM nodes so countdown updates do not intentionally replace controls or request scrolling.
 

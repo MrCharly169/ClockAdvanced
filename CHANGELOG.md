@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 2026.8.1b8 - 2026-08-19
+
+- Made the Advanced Card time editor follow the selected day's effective normal, Holiday weekday, or Holiday weekend/public-holiday time as modes and settings change.
+- Added direct persistence for Holiday weekday and weekend/public-holiday time edits from the Card without reloading the config entry.
+- Highlighted the currently selected weekday in yellow so the active editing context remains unmistakable.
+
 ## 2026.8.1b7 - 2026-08-19
 
 - Split Holiday time into separate weekday and weekend/public-holiday times in setup and options, with automatic migration from the existing non-workday time.

@@ -246,19 +246,74 @@ global.document = {
   if (mondayTime.textContent !== "06:00" || !instance.shadowRoot.querySelector("[data-schedule]").classList.contains("holiday-active")) {
     throw new Error("Holiday mode did not update the effective weekly overview times");
   }
+  const scheduleTimeInput = instance.shadowRoot.querySelector("[data-schedule-time]");
+  if (scheduleTimeInput.value !== "06:00"
+    || instance.shadowRoot.querySelector("[data-alarm-time-label]").textContent !== "Holiday time · weekdays") {
+    throw new Error("The schedule editor did not follow the effective weekday Holiday time");
+  }
+  scheduleTimeInput.value = "07:10";
+  await instance._onChange({ target: scheduleTimeInput });
+  const holidayWeekdayCall = serviceCalls.at(-1);
+  if (holidayWeekdayCall?.[0] !== "clock_advanced" || holidayWeekdayCall?.[1] !== "set_holiday_time"
+    || holidayWeekdayCall?.[2]?.scope !== "weekday" || holidayWeekdayCall?.[2]?.time !== "07:10:00") {
+    throw new Error("The effective weekday Holiday time was not saved through the integration service");
+  }
+  instance.hass = { ...instance._hass, states: {
+    ...instance._hass.states,
+    "sensor.clock_status": { state: "scheduled", attributes: {
+      ...instance._hass.states["sensor.clock_status"].attributes,
+      settings: {
+        ...instance._hass.states["sensor.clock_status"].attributes.settings,
+        holiday_time: "07:10:00",
+      },
+    } },
+  } };
+  if (scheduleTimeInput.value !== "07:10" || mondayTime.textContent !== "07:10") {
+    throw new Error("A changed weekday Holiday time did not refresh the editor and overview");
+  }
   const sundayTime = instance.shadowRoot.querySelector('[data-day="6"]').children[1];
   if (sundayTime.textContent !== "08:30") {
     throw new Error("Holiday mode did not use the separate weekend and public-holiday time");
+  }
+  instance._selectedDay = 6;
+  instance._patch();
+  if (scheduleTimeInput.value !== "08:30"
+    || instance.shadowRoot.querySelector("[data-alarm-time-label]").textContent !== "Holiday time · weekends/public holidays") {
+    throw new Error("The schedule editor did not follow the effective weekend Holiday time");
+  }
+  scheduleTimeInput.value = "09:15";
+  await instance._onChange({ target: scheduleTimeInput });
+  const holidayWeekendCall = serviceCalls.at(-1);
+  if (holidayWeekendCall?.[1] !== "set_holiday_time" || holidayWeekendCall?.[2]?.scope !== "weekend"
+    || holidayWeekendCall?.[2]?.time !== "09:15:00") {
+    throw new Error("The effective weekend Holiday time was not saved through the integration service");
+  }
+  instance.hass = { ...instance._hass, states: {
+    ...instance._hass.states,
+    "sensor.clock_status": { state: "scheduled", attributes: {
+      ...instance._hass.states["sensor.clock_status"].attributes,
+      settings: {
+        ...instance._hass.states["sensor.clock_status"].attributes.settings,
+        holiday_weekend_time: "09:15:00",
+      },
+    } },
+  } };
+  if (scheduleTimeInput.value !== "09:15" || sundayTime.textContent !== "09:15") {
+    throw new Error("A changed weekend Holiday time did not refresh the editor and overview");
   }
   instance.hass = { ...instance._hass, states: {
     ...instance._hass.states,
     "switch.clock_holiday": { state: "off", attributes: {} },
   } };
-  if (mondayTime.textContent !== "06:30" || sundayTime.textContent !== "06:30") {
+  if (mondayTime.textContent !== "06:30" || sundayTime.textContent !== "06:30" || scheduleTimeInput.value !== "06:30") {
     throw new Error("Disabling Holiday mode did not restore the normal weekly times");
   }
   if (!source.includes("::-webkit-date-and-time-value") || !source.includes("max-inline-size:100%")) {
     throw new Error("The iPhone time input containment and centering styles are missing");
+  }
+  if (!source.includes("--ca-selection:#fbbf24")
+    || !source.includes(".day.selected span,.day.selected strong")) {
+    throw new Error("The selected weekday does not have its dedicated yellow marker");
   }
   const tuesdayButton = instance.shadowRoot.querySelector('[data-day="1"]');
   tuesdayButton.dataset.action = "select-day";

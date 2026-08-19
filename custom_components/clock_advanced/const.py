@@ -10,6 +10,7 @@ CARD_TYPE = "custom:clock-advanced-card"
 CARD_CONTRACT_VERSION = 1
 STORAGE_VERSION = 1
 SERVICE_SET_WEEKDAY_ALARM = "set_weekday_alarm"
+SERVICE_SET_HOLIDAY_TIME = "set_holiday_time"
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,

@@ -20,6 +20,8 @@ const TEXT = {
     dismiss: "Dismiss",
     schedule: "Weekly schedule",
     alarmTime: "Alarm time",
+    holidayWeekdayTime: "Holiday time · weekdays",
+    holidayWeekendTime: "Holiday time · weekends/public holidays",
     dayActive: "Day active",
     dayInactive: "Day inactive",
     repeats: "repeats",
@@ -85,6 +87,8 @@ const TEXT = {
     dismiss: "Beenden",
     schedule: "Wochenplan",
     alarmTime: "Weckzeit",
+    holidayWeekdayTime: "Ferienzeit · Werktage",
+    holidayWeekendTime: "Ferienzeit · Wochenende/Feiertage",
     dayActive: "Tag aktiv",
     dayInactive: "Tag inaktiv",
     repeats: "Wiederholungen",
@@ -407,18 +411,56 @@ class ClockAdvancedCard extends HTMLElement {
 
   _selectedScheduleDay(schedule) {
     const day = schedule[this._selectedDay] || {};
-    if (this._scheduleDraft?.index === this._selectedDay) {
+    if (this._scheduleDraft?.index === this._selectedDay && !this._scheduleDraft.holidayScope) {
       return { ...day, ...this._scheduleDraft };
     }
     return day;
   }
 
-  _patchScheduleEditor(schedule, t) {
+  _holidayScopeForDay(index, workdayState) {
+    const todayIndex = (new Date().getDay() + 6) % 7;
+    return index >= 5 || (workdayState === "off" && index === todayIndex)
+      ? "weekend"
+      : "weekday";
+  }
+
+  _scheduleEditorState(schedule) {
     const day = this._selectedScheduleDay(schedule);
-    const time = String(day.time || "06:00").slice(0, 5);
-    const enabled = day.enabled !== false;
+    const attrs = this._hass?.states?.[this._config?.entity]?.attributes || {};
+    const controls = attrs.controls || {};
+    const guards = attrs.guards || {};
+    const settings = attrs.settings || {};
+    const holiday = Boolean(
+      controls.holiday_mode
+      && this._hass?.states?.[controls.holiday_mode]?.state === "on"
+      && settings.holiday_enabled !== false
+    );
+    const workdayState = guards.workday ? this._hass?.states?.[guards.workday]?.state : null;
+    const holidayScope = holiday
+      ? this._holidayScopeForDay(this._selectedDay, workdayState)
+      : null;
+    const configuredTime = holidayScope === "weekend"
+      ? settings.holiday_weekend_time || settings.holiday_time
+      : holidayScope === "weekday"
+        ? settings.holiday_time
+        : day.time;
+    const draftMatches = this._scheduleDraft?.index === this._selectedDay
+      && (this._scheduleDraft.holidayScope || null) === holidayScope;
+    return {
+      day,
+      enabled: day.enabled !== false,
+      holidayScope,
+      time: String(draftMatches ? this._scheduleDraft.time : configuredTime || "06:00").slice(0, 5),
+    };
+  }
+
+  _patchScheduleEditor(schedule, t) {
+    const { day, enabled, holidayScope, time } = this._scheduleEditorState(schedule);
+    const timeLabel = holidayScope === "weekend"
+      ? t.holidayWeekendTime
+      : holidayScope === "weekday" ? t.holidayWeekdayTime : t.alarmTime;
     this._text("[data-editor-day]", t.days[this._selectedDay] || day.day || "");
-    this._text("[data-alarm-time-label]", t.alarmTime);
+    this._text("[data-alarm-time-label]", timeLabel);
     this._text("[data-slider-output]", time);
     this._text("[data-day-toggle-label]", enabled ? t.dayActive : t.dayInactive);
     const slider = this._node("[data-schedule-slider]");
@@ -427,7 +469,7 @@ class ClockAdvancedCard extends HTMLElement {
     const minutes = String(this._minutesFromTime(time));
     if (slider && slider.value !== minutes) slider.value = minutes;
     if (timeInput && timeInput.value !== time) timeInput.value = time;
-    if (timeInput?.getAttribute("aria-label") !== t.alarmTime) timeInput?.setAttribute("aria-label", t.alarmTime);
+    if (timeInput?.getAttribute("aria-label") !== timeLabel) timeInput?.setAttribute("aria-label", timeLabel);
     toggle?.classList.toggle("selected", enabled);
     toggle?.setAttribute("aria-pressed", String(enabled));
   }
@@ -463,12 +505,21 @@ class ClockAdvancedCard extends HTMLElement {
     const mode = this._mode();
     const schedule = Array.isArray(attrs.schedule) ? attrs.schedule : [];
     if (this._scheduleDraft) {
-      const saved = schedule[this._scheduleDraft.index];
-      if (
-        saved
-        && String(saved.time || "").slice(0, 5) === this._scheduleDraft.time
-        && Boolean(saved.enabled) === Boolean(this._scheduleDraft.enabled)
-      ) this._scheduleDraft = null;
+      if (this._scheduleDraft.holidayScope) {
+        const key = this._scheduleDraft.holidayScope === "weekend"
+          ? "holiday_weekend_time"
+          : "holiday_time";
+        if (String(settings[key] || "").slice(0, 5) === this._scheduleDraft.time) {
+          this._scheduleDraft = null;
+        }
+      } else {
+        const saved = schedule[this._scheduleDraft.index];
+        if (
+          saved
+          && String(saved.time || "").slice(0, 5) === this._scheduleDraft.time
+          && Boolean(saved.enabled) === Boolean(this._scheduleDraft.enabled)
+        ) this._scheduleDraft = null;
+      }
     }
     const target = this._targetDate(attrs);
     const enabled = controls.enabled && this._hass.states[controls.enabled]?.state === "on";
@@ -505,7 +556,6 @@ class ClockAdvancedCard extends HTMLElement {
       ? String(settings.holiday_weekend_time || settings.holiday_time || "").slice(0, 5)
       : "";
     scheduleNode?.classList.toggle("holiday-active", Boolean(holidayWeekdayTime));
-    const todayIndex = (new Date().getDay() + 6) % 7;
     for (let index = 0; index < 7; index += 1) {
       const day = schedule[index] || {};
       const dayNode = this._node(`[data-day="${index}"]`);
@@ -514,10 +564,13 @@ class ClockAdvancedCard extends HTMLElement {
       if (dayNode.className !== dayClass) dayNode.className = dayClass;
       const dayParts = dayNode.querySelectorAll("span,strong");
       const dayLabelText = t.days[index] || day.day || "";
-      const usesHolidayWeekendTime = index >= 5 || (workdayState === "off" && index === todayIndex);
-      const effectiveHolidayTime = usesHolidayWeekendTime
+      const holidayScope = this._holidayScopeForDay(index, workdayState);
+      let effectiveHolidayTime = holidayScope === "weekend"
         ? holidayWeekendTime
         : holidayWeekdayTime;
+      if (this._scheduleDraft?.holidayScope === holidayScope) {
+        effectiveHolidayTime = this._scheduleDraft.time;
+      }
       const dayTimeText = day.enabled ? effectiveHolidayTime || String(day.time || "").slice(0, 5) : "—";
       if (dayParts[0] && dayParts[0].textContent !== dayLabelText) dayParts[0].textContent = dayLabelText;
       if (dayParts[1] && dayParts[1].textContent !== dayTimeText) dayParts[1].textContent = dayTimeText;
@@ -660,21 +713,29 @@ class ClockAdvancedCard extends HTMLElement {
     const timeInput = this._eventNode(event, "[data-schedule-time]");
     if (!slider && !timeInput) return;
     const schedule = this._hass?.states?.[this._config?.entity]?.attributes?.schedule || [];
-    const current = this._selectedScheduleDay(schedule);
+    const current = this._scheduleEditorState(schedule);
     const time = slider
       ? this._timeFromMinutes(slider.value)
       : String(timeInput.value || "00:00").slice(0, 5);
     this._scheduleDraft = {
       index: this._selectedDay,
       time,
-      enabled: current.enabled !== false,
+      enabled: current.enabled,
+      holidayScope: current.holidayScope,
     };
     const linked = slider ? this._node("[data-schedule-time]") : this._node("[data-schedule-slider]");
     const linkedValue = slider ? time : String(this._minutesFromTime(time));
     if (linked && linked.value !== linkedValue) linked.value = linkedValue;
     this._text("[data-slider-output]", time);
-    const dayTime = this._node(`[data-day="${this._selectedDay}"] strong`);
-    if (dayTime && dayTime.textContent !== time.slice(0, 5)) dayTime.textContent = time.slice(0, 5);
+    const attrs = this._hass?.states?.[this._config?.entity]?.attributes || {};
+    const guards = attrs.guards || {};
+    const workdayState = guards.workday ? this._hass?.states?.[guards.workday]?.state : null;
+    for (let index = 0; index < 7; index += 1) {
+      if (current.holidayScope && this._holidayScopeForDay(index, workdayState) !== current.holidayScope) continue;
+      if (!current.holidayScope && index !== this._selectedDay) continue;
+      const dayTime = this._node(`[data-day="${index}"] strong`);
+      if (dayTime && dayTime.textContent !== time.slice(0, 5)) dayTime.textContent = time.slice(0, 5);
+    }
   }
 
   async _onChange(event) {
@@ -685,14 +746,18 @@ class ClockAdvancedCard extends HTMLElement {
       ? this._timeFromMinutes(slider.value)
       : String(timeInput.value || "00:00").slice(0, 5);
     const schedule = this._hass?.states?.[this._config?.entity]?.attributes?.schedule || [];
-    const current = this._selectedScheduleDay(schedule);
-    await this._saveWeekday(time, current.enabled !== false);
+    const current = this._scheduleEditorState(schedule);
+    if (current.holidayScope) {
+      await this._saveHolidayTime(time, current.holidayScope, current.enabled);
+    } else {
+      await this._saveWeekday(time, current.enabled);
+    }
   }
 
   async _saveWeekday(time, enabled) {
     const entity = this._hass?.states?.[this._config?.entity];
     if (!entity || entity.attributes?.schedule_source === "schedule_entity") return;
-    this._scheduleDraft = { index: this._selectedDay, time, enabled };
+    this._scheduleDraft = { index: this._selectedDay, time, enabled, holidayScope: null };
     this._patchScheduleEditor(entity.attributes?.schedule || [], TEXT[this._lang()]);
     try {
       await this._hass.callService("clock_advanced", "set_weekday_alarm", {
@@ -708,9 +773,32 @@ class ClockAdvancedCard extends HTMLElement {
     }
   }
 
+  async _saveHolidayTime(time, scope, enabled) {
+    const entity = this._hass?.states?.[this._config?.entity];
+    if (!entity || entity.attributes?.schedule_source === "schedule_entity") return;
+    this._scheduleDraft = {
+      index: this._selectedDay,
+      time,
+      enabled,
+      holidayScope: scope,
+    };
+    this._patchScheduleEditor(entity.attributes?.schedule || [], TEXT[this._lang()]);
+    try {
+      await this._hass.callService("clock_advanced", "set_holiday_time", {
+        entity_id: this._config.entity,
+        scope,
+        time: `${time}:00`,
+      });
+    } catch (error) {
+      this._scheduleDraft = null;
+      this._patch();
+      throw error;
+    }
+  }
+
   _styles() {
     return `<style>
-      :host { display:block; width:100%; max-width:100%; min-width:0; overflow:visible; overflow-anchor:none; container-type:inline-size; --ca-accent:#93c5fd; --ca-warm:#f7ca78; }
+      :host { display:block; width:100%; max-width:100%; min-width:0; overflow:visible; overflow-anchor:none; container-type:inline-size; --ca-accent:#93c5fd; --ca-warm:#f7ca78; --ca-selection:#fbbf24; }
       * { box-sizing:border-box; min-width:0; }
       [hidden] { display:none!important; }
       ha-card { position:relative; display:block; width:100%; max-width:100%; overflow:hidden; padding:16px; color:var(--primary-text-color,#fff); background:var(--ha-card-background,var(--card-background-color,#202020)); border:1px solid rgba(255,255,255,.09); border-radius:22px; box-shadow:none; }
@@ -774,8 +862,9 @@ class ClockAdvancedCard extends HTMLElement {
       .day span { color:var(--secondary-text-color); }
       .day strong { margin-top:4px; font-size:.72rem; font-variant-numeric:tabular-nums; }
       .day.off { opacity:.42; }
-      .day.selected { opacity:1; border-color:var(--ca-accent); box-shadow:0 0 0 1px color-mix(in srgb,var(--ca-accent) 35%,transparent); }
+      .day.selected { opacity:1; border-color:var(--ca-selection); background:color-mix(in srgb,var(--ca-selection) 10%,rgba(255,255,255,.047)); box-shadow:0 0 0 1px color-mix(in srgb,var(--ca-selection) 40%,transparent); }
       .schedule.holiday-active .day.on strong { color:var(--ca-accent); }
+      .day.selected span,.day.selected strong,.schedule.holiday-active .day.selected strong { color:var(--ca-selection); }
       .schedule-editor { display:grid; gap:9px; margin-top:9px; padding:11px; overflow:hidden; border-radius:14px; background:rgba(255,255,255,.047); }
       .schedule-editor-head,.time-slider-label { display:flex; align-items:center; justify-content:space-between; gap:10px; }
       .schedule-editor-head>strong { font-size:.75rem; }

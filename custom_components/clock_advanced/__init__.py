@@ -21,6 +21,7 @@ from .const import (
     CONF_BLOCK_NON_WORKDAYS,
     CONF_BLOCK_STATE,
     CONF_ESCALATE_AFTER_SNOOZES,
+    CONF_HOLIDAY_TIME,
     CONF_HOLIDAY_WEEKEND_TIME,
     CONF_NON_WORKDAY_TIME,
     CONF_SCHEDULE_SOURCE,
@@ -32,6 +33,7 @@ from .const import (
     DEFAULT_SCHEDULE_SOURCE,
     DOMAIN,
     PLATFORMS,
+    SERVICE_SET_HOLIDAY_TIME,
     SERVICE_SET_WEEKDAY_ALARM,
     SCHEDULE_SOURCE_WEEKLY,
     WEEKDAYS,
@@ -54,9 +56,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         hass.data[key] = True
     service_key = f"{DOMAIN}_services_registered"
     if not hass.data.get(service_key):
-        async def async_set_weekday_alarm(call: ServiceCall) -> None:
-            """Persist one internal weekday and refresh without reloading the entry."""
-            entity_id = call.data[ATTR_ENTITY_ID]
+
+        def editable_clock(entity_id: str) -> tuple[ConfigEntry, ClockRuntime]:
+            """Resolve one loaded Clock Advanced entry using any of its entities."""
             registry_entry = er.async_get(hass).async_get(entity_id)
             if (
                 registry_entry is None
@@ -77,14 +79,32 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                 != SCHEDULE_SOURCE_WEEKLY
             ):
                 raise HomeAssistantError(
-                    "Weekday alarms can only be edited for the internal weekly schedule"
+                    "Schedule times can only be edited for the internal weekly schedule"
                 )
+            return entry, runtime
+
+        async def async_set_weekday_alarm(call: ServiceCall) -> None:
+            """Persist one internal weekday and refresh without reloading the entry."""
+            entry, runtime = editable_clock(call.data[ATTR_ENTITY_ID])
             day = call.data["day"]
             alarm_time = call.data["time"]
             options = dict(entry.options)
             options[day_time_key(day)] = alarm_time.isoformat()
             if "enabled" in call.data:
                 options[day_enabled_key(day)] = call.data["enabled"]
+            hass.config_entries.async_update_entry(entry, options=options)
+            await runtime.async_refresh_schedule()
+
+        async def async_set_holiday_time(call: ServiceCall) -> None:
+            """Persist one Holiday time scope and refresh without reloading the entry."""
+            entry, runtime = editable_clock(call.data[ATTR_ENTITY_ID])
+            key = (
+                CONF_HOLIDAY_WEEKEND_TIME
+                if call.data["scope"] == "weekend"
+                else CONF_HOLIDAY_TIME
+            )
+            options = dict(entry.options)
+            options[key] = call.data["time"].isoformat()
             hass.config_entries.async_update_entry(entry, options=options)
             await runtime.async_refresh_schedule()
 
@@ -98,6 +118,18 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     vol.Required("day"): vol.In(WEEKDAYS),
                     vol.Required("time"): cv.time,
                     vol.Optional("enabled"): cv.boolean,
+                }
+            ),
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_HOLIDAY_TIME,
+            async_set_holiday_time,
+            schema=vol.Schema(
+                {
+                    vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+                    vol.Required("scope"): vol.In(("weekday", "weekend")),
+                    vol.Required("time"): cv.time,
                 }
             ),
         )

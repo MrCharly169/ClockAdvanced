@@ -21,7 +21,7 @@
 
 **Ein vollständiger, über die Oberfläche konfigurierbarer Wecker für Home Assistant.** Clock Advanced vereint Zeitplan, Bedingungen, Aktionen, Schlummerverhalten, Eskalation und sicheren Abschluss eines Weckers in einer Integration. Eine responsive Dashboard-Card und ein kompaktes Badge sind enthalten.
 
-> **Release-Kanal:** `2026.8.1b7` ist die aktuell veröffentlichte Beta-/Vorabversion. Der neueste stabile Release ist `2026.8.0`. Beta-Releases dienen zum Testen aktueller Funktionen; der stabile Release ist die passendere Wahl für die etablierte Basis.
+> **Release-Kanal:** `2026.8.1b8` ist die aktuell veröffentlichte Beta-/Vorabversion. Der neueste stabile Release ist `2026.8.0`. Beta-Releases dienen zum Testen aktueller Funktionen; der stabile Release ist die passendere Wahl für die etablierte Basis.
 
 ## Mehr als eine Weckzeit
 
@@ -178,7 +178,7 @@ Ferienzeit verändert, *wann* ein aktivierter wöchentlicher Termin stattfindet.
 
 - **Kompakt** — Uhrzeit, Zustand und aktiver Alarmkontext im kleinsten Layout. Zeitplan und Optionsmenü sind ausgeblendet.
 - **Einfach** — empfohlene Alltagsansicht mit nächstem Alarmkontext, Schlummern/Beenden im aktiven Zustand und geschlossenem Options-Overlay für „Nächsten auslassen“, Ferienzeit und Urlaub.
-- **Erweitert** — Einfach plus Sieben-Tage-Plan, Fünf-Minuten-Schieberegler, exaktes Zeitfeld, Tagesaktivierung sowie technische Bedingungs- und Sicherheitsdetails in Optionen.
+- **Erweitert** — Einfach plus Sieben-Tage-Plan, Fünf-Minuten-Schieberegler, exaktes Zeitfeld, Tagesaktivierung sowie technische Bedingungs- und Sicherheitsdetails in Optionen. Der ausgewählte Tag ist gelb markiert; der Editor folgt seiner wirksamen normalen Uhrzeit oder Ferienzeit.
 
 `easy` ist Standard. Alte Werte `auto` und `standard` erscheinen als Einfach; `kiosk` erscheint als Erweitert. `language` akzeptiert `auto`, `en` oder `de`. Die Card folgt Themes, respektiert reduzierte Bewegung, unterstützt Sections-Grid-Größen und verwendet stabile DOM-Knoten, damit Countdown-Aktualisierungen Bedienelemente nicht absichtlich ersetzen oder Scrollen anfordern.
 
