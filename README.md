@@ -111,7 +111,7 @@ The URL is intentionally permanent and has no version query. The integration man
 
 ### Add the Card and Badge
 
-For dashboards managed by Home Assistant, choose **Edit dashboard → Add card → Clock Advanced** or **Add badge → Clock Advanced**. YAML-mode dashboards can use the same definitions but do not provide Home Assistant's graphical editor.
+For dashboards managed by Home Assistant, choose **Edit dashboard → Add card → Clock Advanced** for the Card or **Add badge → Entity** for the native status Badge. YAML-mode dashboards can use the same definitions but do not provide Home Assistant's graphical editor.
 
 Minimal Easy Card:
 
@@ -125,12 +125,15 @@ language: auto
 Minimal Badge:
 
 ```yaml
-type: custom:clock-advanced-badge
+type: entity
 entity: sensor.advanced_alarm_clock_status
-language: auto
+show_name: false
+show_icon: true
+show_state: true
+color: state
 ```
 
-Use the actual status sensor created for your config entry. The once-only onboarding notification includes both ready-to-copy definitions with the correct entity ID.
+Use the actual status sensor created for your config entry. Clock Advanced supplies its enum state and state-dependent icon; configure conditional display only through Home Assistant's native Visibility tab. The once-only onboarding notification includes both ready-to-copy definitions with the correct entity ID.
 
 ## The setup wizard
 

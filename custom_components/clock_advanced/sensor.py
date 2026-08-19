@@ -81,6 +81,23 @@ class ClockStatusSensor(ClockAdvancedEntity, SensorEntity):
     def native_value(self) -> str:
         return self.runtime.state.status
 
+    @property
+    def icon(self) -> str:
+        return {
+            STATUS_IDLE: "mdi:minus",
+            STATUS_SCHEDULED: "mdi:calendar-check",
+            STATUS_DISABLED: "mdi:power",
+            STATUS_VACATION: "mdi:palm-tree",
+            STATUS_PRE_ALARM: "mdi:weather-sunset-up",
+            STATUS_RINGING: "mdi:bell-ring",
+            STATUS_SNOOZED: "mdi:alarm-snooze",
+            STATUS_DISMISSED: "mdi:check",
+            STATUS_SKIPPED: "mdi:skip-next",
+            STATUS_TIMEOUT: "mdi:timer-alert",
+            STATUS_ERROR: "mdi:alert-circle",
+            STATUS_BLOCKED: "mdi:shield-off",
+        }.get(self.native_value, "mdi:calendar-clock")
+
     def _entity(self, platform: str, key: str) -> str | None:
         return er.async_get(self.hass).async_get_entity_id(
             platform, DOMAIN, f"{self.runtime.entry.entry_id}_{key}"
@@ -117,8 +134,8 @@ class ClockStatusSensor(ClockAdvancedEntity, SensorEntity):
                 "mode: easy\nlanguage: auto\n"
             ),
             "badge_yaml": (
-                f"type: custom:clock-advanced-badge\nentity: {self.entity_id}\n"
-                "language: auto\n"
+                f"type: entity\nentity: {self.entity_id}\n"
+                "show_name: false\nshow_icon: true\nshow_state: true\ncolor: state\n"
             ),
             "name": self.runtime.entry.title,
             "next_alarm": (
