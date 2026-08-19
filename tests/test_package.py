@@ -14,6 +14,7 @@ class PackageTests(unittest.TestCase):
         hacs = json.loads((ROOT / "hacs.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["domain"], "clock_advanced")
         self.assertTrue(manifest["version"].startswith("2026.8."))
+        self.assertEqual(manifest["integration_type"], "hub")
         self.assertEqual(hacs["homeassistant"], "2026.8.0")
         self.assertTrue(hacs["hide_default_branch"])
 
@@ -70,12 +71,32 @@ class PackageTests(unittest.TestCase):
         self.assertIn("<ha-badge", frontend)
         self.assertIn('class="clock-symbol" icon="mdi:alarm"', frontend)
         self.assertIn('class="state-marker"', frontend)
-        self.assertIn('data-mode="${esc(details.mode)}"', frontend)
+        self.assertIn("badge.dataset.mode = mode", frontend)
         self.assertIn("_lastRenderSignature", frontend)
         self.assertIn('new CustomEvent("hass-more-info"', frontend)
         self.assertIn('mode: "easy"', frontend)
         self.assertIn("mode: storage", dev_config)
         self.assertNotIn("mode: yaml", dev_config)
+
+    def test_card_and_badge_use_stable_runtime_dom(self) -> None:
+        frontend = (COMPONENT / "frontend" / "clock-advanced-card.js").read_text(
+            encoding="utf-8"
+        )
+        card = frontend.split("class ClockAdvancedCard extends", 1)[1].split(
+            "class ClockAdvancedCardEditor extends", 1
+        )[0]
+        badge = frontend.split("class ClockAdvancedBadge extends", 1)[1].split(
+            "class ClockAdvancedBadgeEditor extends", 1
+        )[0]
+        self.assertEqual(card.count("shadowRoot.innerHTML"), 1)
+        self.assertEqual(badge.count("shadowRoot.innerHTML"), 1)
+        self.assertIn("_ensureStructure()", card)
+        self.assertIn("_patch()", card)
+        self.assertIn("_ensureStructure()", badge)
+        self.assertIn("_patch()", badge)
+        for forbidden in ("scrollIntoView", "scrollTo(", "window.scroll", ".focus("):
+            self.assertNotIn(forbidden, card)
+            self.assertNotIn(forbidden, badge)
 
     def test_localizations_have_matching_top_level_surfaces(self) -> None:
         en = json.loads((COMPONENT / "translations" / "en.json").read_text(encoding="utf-8"))
@@ -98,6 +119,116 @@ class PackageTests(unittest.TestCase):
         self.assertIn("async_validate_conditions_config", runtime)
         self.assertIn("CONF_ESCALATE_AFTER_SNOOZES", runtime)
         self.assertIn("CONF_START_CONDITIONS", diagnostics)
+
+    def test_setup_wizard_and_sectioned_options_are_shipped(self) -> None:
+        config_flow = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
+        self.assertIn("class ClockAdvancedConfigFlow", config_flow)
+        self.assertIn("class ClockAdvancedOptionsFlow", config_flow)
+        self.assertIn("OptionsFlowWithReload", config_flow)
+        self.assertIn("async_show_menu", config_flow)
+        self.assertIn("CONF_NAME, CONF_SCHEDULE_SOURCE", config_flow)
+        self.assertIn("async_update_entry", config_flow)
+        self.assertIn("async_step_notifications", config_flow)
+        self.assertIn("CONF_NOTIFICATION_TARGETS", config_flow)
+
+    def test_customer_notification_controls_and_reasons_are_shipped(self) -> None:
+        config_flow = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
+        runtime = (COMPONENT / "runtime.py").read_text(encoding="utf-8")
+        diagnostics = (COMPONENT / "diagnostics.py").read_text(encoding="utf-8")
+        for token in (
+            "CONF_NOTIFICATIONS_ENABLED",
+            "CONF_NOTIFICATION_TARGETS",
+            "CONF_NOTIFICATION_EVENTS",
+            "notification_event",
+        ):
+            self.assertIn(token, config_flow)
+        self.assertIn('"persistent_notification"', runtime)
+        self.assertIn('"send_message"', runtime)
+        self.assertIn("_notification_content", runtime)
+        self.assertIn('self._launch_notification("blocked"', runtime)
+        self.assertIn("CONF_NOTIFICATION_TARGETS", diagnostics)
+
+    def test_actionable_evening_reminder_is_occurrence_safe(self) -> None:
+        config_flow = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
+        runtime = (COMPONENT / "runtime.py").read_text(encoding="utf-8")
+        translations = (COMPONENT / "translations" / "de.json").read_text(
+            encoding="utf-8"
+        )
+        for token in (
+            "CONF_REMINDER_ENABLED",
+            "CONF_REMINDER_TIME",
+            "CONF_REMINDER_DASHBOARD_PATH",
+            "async_step_reminder",
+        ):
+            self.assertIn(token, config_flow)
+        self.assertIn("EVENT_NOTIFICATION_ACTION", runtime)
+        self.assertIn("CLOCK_ADVANCED:{self.entry.entry_id}:SKIP", runtime)
+        self.assertIn("CLOCK_ADVANCED:{self.entry.entry_id}:CHANGE", runtime)
+        self.assertIn('"behavior": "textInput"', runtime)
+        self.assertIn('"action": "URI"', runtime)
+        self.assertIn("int(current.timestamp()) != token", runtime)
+        self.assertIn("_mobile_app_notify_service", runtime)
+        self.assertIn('service = f"mobile_app_{slugify(name)}"', runtime)
+        self.assertIn("falling back to notify entity", runtime)
+        self.assertIn('"send_message"', runtime)
+        self.assertIn("Passing mobile-app data rejects the whole call", runtime)
+        self.assertIn("Empfängerauswahl im nächsten Schritt aktiviert", translations)
+        self.assertIn("Ferienzeit verschiebt die Uhrzeit", translations)
+        self.assertIn('"holiday_mode": { "name": "Ferienzeit" }', translations)
+
+    def test_dismiss_and_confirmation_await_the_same_cleanup_path(self) -> None:
+        runtime = (COMPONENT / "runtime.py").read_text(encoding="utf-8")
+        dismiss_start = runtime.index("    async def async_dismiss(")
+        dismiss_end = runtime.index("    async def _async_terminal_actions(", dismiss_start)
+        dismiss = runtime[dismiss_start:dismiss_end]
+        state_change_start = runtime.index("    def _handle_state_change(")
+        state_change_end = runtime.index(
+            "    def _handle_pre_alarm_due(", state_change_start
+        )
+        state_change = runtime[state_change_start:state_change_end]
+        terminal_start = runtime.index("    async def _async_terminal_actions(")
+        terminal_end = runtime.index("    @callback", terminal_start)
+        terminal = runtime[terminal_start:terminal_end]
+
+        self.assertIn("await self._async_terminal_actions(phase, reason)", dismiss)
+        self.assertNotIn("async_create_task(self._async_terminal_actions", dismiss)
+        self.assertGreaterEqual(dismiss.count("self.state.last_reason = reason"), 2)
+        self.assertIn('self.async_dismiss("confirmation")', state_change)
+        self.assertIn("context=context or Context()", runtime)
+        self.assertIn("static_validated = cv.SCRIPT_SCHEMA", runtime)
+        self.assertLess(
+            terminal.index("await self._async_run_phase(phase"),
+            terminal.index("PHASE_CLEANUP, context=action_context"),
+        )
+
+    def test_card_weekday_editor_and_native_vacation_are_shipped(self) -> None:
+        init = (COMPONENT / "__init__.py").read_text(encoding="utf-8")
+        config_flow = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
+        runtime = (COMPONENT / "runtime.py").read_text(encoding="utf-8")
+        switch = (COMPONENT / "switch.py").read_text(encoding="utf-8")
+        sensor = (COMPONENT / "sensor.py").read_text(encoding="utf-8")
+        frontend = (COMPONENT / "frontend" / "clock-advanced-card.js").read_text(
+            encoding="utf-8"
+        )
+        services = (COMPONENT / "services.yaml").read_text(encoding="utf-8")
+        self.assertIn("SERVICE_SET_WEEKDAY_ALARM", init)
+        self.assertIn("SERVICE_SET_HOLIDAY_TIME", init)
+        self.assertIn("async_update_entry", init)
+        self.assertIn("await runtime.async_refresh_schedule()", init)
+        self.assertIn("set_weekday_alarm:", services)
+        self.assertIn("set_holiday_time:", services)
+        self.assertIn("async_set_holiday_time", init)
+        self.assertIn("async_set_vacation_mode", runtime)
+        self.assertIn('"vacation_mode"', switch)
+        self.assertIn('"vacation_mode": self._entity', sensor)
+        self.assertIn('data-schedule-slider type="range"', frontend)
+        self.assertIn('data-schedule-time type="time"', frontend)
+        self.assertIn('data-action="toggle-vacation"', frontend)
+        self.assertIn('"holiday_time": self.runtime.schedule.holiday_time.isoformat()', sensor)
+        self.assertIn('"holiday_weekend_time": (', sensor)
+        self.assertIn("CONF_HOLIDAY_WEEKEND_TIME", runtime)
+        self.assertIn("version=5", init)
+        self.assertIn("VERSION = 5", config_flow)
 
 
 if __name__ == "__main__":

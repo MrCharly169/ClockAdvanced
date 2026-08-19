@@ -62,6 +62,17 @@ timeout:
         data:
           priority: high
 
+dismiss:
+  # The refactored NightTime automation is driven by this helper. Turning the
+  # helper off runs its complete daytime sequence: light automation is
+  # restored, the curtain opens, audio settings return to daytime values, the
+  # bedroom switch turns off, and the thermostats resume week_program_1.
+  - action: input_boolean.turn_off
+    target:
+      entity_id:
+        - input_boolean.nighttime
+        - input_boolean.light_s_manual_haus1_et1_masterbedroom
+
 cleanup:
   - action: media_player.turn_off
     target:

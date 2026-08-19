@@ -4,22 +4,25 @@
     "step": {
       "user": {
         "title": "Create an advanced alarm clock",
-        "description": "Step 1 of 7 · Give this independent clock a clear room or purpose name. The wizard will guide you through timing, conditions, behavior, and actions.",
-        "data": { "name": "Name" }
+        "description": "Step 1 of 10 · Give this alarm clock a clear room or purpose name. The wizard then follows the real customer journey from preparation to getting up.",
+        "data": { "name": "Name" },
+        "data_description": { "name": "This name appears on entities, the Card, and notifications, for example “Bedroom alarm”." }
       },
       "source": {
         "title": "Choose the alarm source",
-        "description": "Step 2 of 7 · Use Clock Advanced's exact weekly alarm times, or trigger when a Home Assistant Schedule helper changes from off to on.",
-        "data": { "schedule_source": "Alarm source" }
+        "description": "Step 2 of 10 · Choose where alarm times come from. The Clock Advanced weekly schedule is recommended for the simplest editing directly on the Advanced Card.",
+        "data": { "schedule_source": "Alarm source" },
+        "data_description": { "schedule_source": "Clock Advanced: edit every weekday in the integration and Card. Home Assistant Schedule: use existing time blocks; Card time editing is then disabled." }
       },
       "helper_schedule": {
-        "title": "Select a Schedule helper",
-        "description": "Step 3 of 7 · The alarm starts at the beginning of every active block. Create or edit the helper under Settings → Devices & services → Helpers.",
-        "data": { "schedule_entity": "Schedule helper" }
+        "title": "Select a Home Assistant schedule",
+        "description": "Step 3 of 10 · The alarm starts at the beginning of every active block of the selected native schedule entity.",
+        "data": { "schedule_entity": "Schedule entity" },
+        "data_description": { "schedule_entity": "Select the schedule whose block start should be used as the alarm time. Later changes are made in the native Home Assistant Schedule." }
       },
       "schedule": {
         "title": "Weekly schedule",
-        "description": "Step 3 of 7 · Enable days independently. Holiday and non-workday times override only enabled days.",
+        "description": "Step 3 of 10 · Enable only the desired days and set their normal time. Holiday time shifts the alarm; Vacation turns it off completely.",
         "data": {
           "monday_enabled": "Monday enabled", "monday_time": "Monday time",
           "tuesday_enabled": "Tuesday enabled", "tuesday_time": "Tuesday time",
@@ -28,13 +31,21 @@
           "friday_enabled": "Friday enabled", "friday_time": "Friday time",
           "saturday_enabled": "Saturday enabled", "saturday_time": "Saturday time",
           "sunday_enabled": "Sunday enabled", "sunday_time": "Sunday time",
-          "holiday_enabled": "Use holiday-mode time", "holiday_time": "Holiday-mode time",
+          "holiday_enabled": "Use Holiday time", "holiday_time": "Holiday time – weekdays",
+          "holiday_weekend_time": "Holiday time – weekends/public holidays",
           "non_workday_enabled": "Use non-workday time", "non_workday_time": "Non-workday time"
+        },
+        "data_description": {
+          "holiday_enabled": "When Holiday time is active on the Card, the alarm stays enabled and uses this alternative time.",
+          "holiday_time": "Alternative time from Monday to Friday when the day is not a public holiday.",
+          "holiday_weekend_time": "Alternative time on Saturdays, Sundays, and public holidays. Vacation blocks the alarm completely instead.",
+          "non_workday_enabled": "Uses a later time on days off when a workday sensor is selected.",
+          "non_workday_time": "Alternative time when the workday sensor reports off."
         }
       },
       "behavior": {
         "title": "Alarm lifecycle",
-        "description": "Repeat cadence, Snooze and the complete-session timeout remain separate.",
+        "description": "Choose how the alarm behaves after it starts. Repeat cadence, Snooze and the complete-session timeout remain separate.",
         "data": {
           "pre_alarm_minutes": "Pre-alarm lead time (minutes)",
           "repeat_interval_minutes": "Repeat interval (minutes)",
@@ -44,11 +55,21 @@
           "max_snoozes": "Maximum snoozes (0 disables)",
           "timeout_minutes": "Safety timeout (minutes)",
           "terminal_state_minutes": "Keep final state visible (minutes)"
+        },
+        "data_description": {
+          "pre_alarm_minutes": "Runs preparation actions this many minutes before the alarm; 0 disables pre-alarm.",
+          "repeat_interval_minutes": "Runs the Repeat action again after this interval while the alarm remains active.",
+          "escalate_after_repeats": "Runs Escalate once after this many repeats; 0 disables this trigger.",
+          "escalate_after_snoozes": "Runs Escalate once after this many snoozes; 0 disables this trigger.",
+          "snooze_minutes": "Length of one snooze period.",
+          "max_snoozes": "How many snoozes are allowed; 0 disables Snooze completely.",
+          "timeout_minutes": "Safely ends the complete alarm session after this time, including snooze periods.",
+          "terminal_state_minutes": "How long Dismissed, Skipped, or Timed out remains visible."
         }
       },
       "guards": {
         "title": "Conditions and blockers",
-        "description": "Step 4 of 7 · Alarm start conditions use Home Assistant's normal condition editor. Every condition added there must pass. Example: Numeric state → zone.home → above 1.",
+        "description": "Step 4 of 10 · Optional: decide when the alarm is allowed or blocked. With nothing selected it always starts on schedule. Every added start condition must pass.",
         "data": {
           "workday_sensor": "Workday sensor",
           "vacation_entity": "Vacation-mode entity",
@@ -64,6 +85,77 @@
           "start_conditions": "These native HA conditions are checked before pre-alarm and start. Numeric state, state, time, zone, device, template, and AND/OR/NOT are supported."
         }
       },
+      "start_actions": {
+        "title": "Before the alarm and when it starts",
+        "description": "Step 5 of 10 · Choose what happens before the alarm time and when ringing starts. Both fields are optional and use normal Home Assistant actions.",
+        "data": {
+          "actions_prepare": "Before the alarm (optional)",
+          "actions_start": "When the alarm starts"
+        },
+        "data_description": {
+          "actions_prepare": "For example, slowly turn on a light. The lead time is set in the next step.",
+          "actions_start": "For example, start music on the first speaker. This runs again after every snooze."
+        }
+      },
+      "response": {
+        "title": "Snooze and when nobody responds",
+        "description": "Step 6 of 10 · Set the snooze period, reminders, and one-time escalation. The defaults are already practical; additional actions are optional.",
+        "data": {
+          "pre_alarm_minutes": "Preparation starts earlier (minutes)",
+          "repeat_interval_minutes": "Remind again after (minutes)",
+          "escalate_after_repeats": "React more strongly after repeats (0 = off)",
+          "escalate_after_snoozes": "React more strongly after snoozes (0 = off)",
+          "snooze_minutes": "Length of one snooze (minutes)",
+          "max_snoozes": "Number of snoozes allowed (0 = off)",
+          "timeout_minutes": "Safety end after total (minutes)",
+          "terminal_state_minutes": "Keep final status visible (minutes)",
+          "actions_repeat": "Action when reminding again (optional)",
+          "actions_escalate": "Stronger action when nobody responds (optional)",
+          "actions_snooze": "Action when Snooze is pressed (optional)"
+        },
+        "data_description": {
+          "actions_repeat": "For example, retrigger the current music output.",
+          "actions_escalate": "For example, start a second speaker or brighter lights.",
+          "actions_snooze": "For example, pause music during the snooze period."
+        }
+      },
+      "reminder": {
+        "title": "Reminder on the evening before",
+        "description": "Step 7 of 10 · Announces the exact next alarm. This separate switch must be enabled; selecting recipients in the next step does not enable the reminder automatically. Phone recipients can skip that occurrence, change it once with HH:MM, or open the Clock page.",
+        "data": {
+          "next_alarm_reminder_enabled": "Enable evening reminder",
+          "next_alarm_reminder_time": "Reminder time",
+          "dashboard_path": "Path to the Clock Card (optional)"
+        },
+        "data_description": {
+          "next_alarm_reminder_enabled": "Must be enabled to schedule the evening reminder. General alarm notifications are independent.",
+          "next_alarm_reminder_time": "Time on the calendar day before the alarm; 19:00 is recommended.",
+          "dashboard_path": "For example /lovelace-bedroom/alarm. Empty opens the Clock Advanced integration."
+        }
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Step 8 of 10 · Select recipients and only important messages during the alarm. The separate evening reminder uses the same recipients. Without recipients, everything appears in the Home Assistant notification inbox.",
+        "data": {
+          "notifications_enabled": "Enable notifications",
+          "notification_targets": "Recipients (optional)",
+          "notification_events": "Notify me when"
+        },
+        "data_description": {
+          "notifications_enabled": "Master switch for every alarm notification from this clock.",
+          "notification_targets": "Optionally select one or more Notify entities such as a phone. Leave empty for the Home Assistant notification inbox.",
+          "notification_events": "Only selected events send a message. Blocked notifications also name the condition that did not pass."
+        }
+      },
+      "finish_actions": {
+        "title": "When getting up and at the safety end",
+        "description": "Step 9 of 10 · Optionally decide what happens on dismissal, timeout, and final cleanup. Cleanup should reliably turn off media and lights.",
+        "data": {
+          "actions_dismiss": "When getting up or dismissing manually",
+          "actions_timeout": "When nobody responds before the safety end",
+          "actions_cleanup": "Always clean up last"
+        }
+      },
       "actions": {
         "title": "Action phases",
         "description": "Optional actions for automations, music, and lights. Empty fields are completely fine. Start runs for the initial alarm and again after each completed Snooze.",
@@ -74,22 +166,24 @@
           "actions_timeout": "Timeout", "actions_cleanup": "Cleanup"
         },
         "data_description": {
+          "actions_prepare": "For example, slowly turn on a light before the actual alarm starts.",
           "actions_start": "Start music on the first media player here. This sequence also runs again when the snooze period ends.",
           "actions_repeat": "Optionally retrigger the current output while the alarm is ringing.",
           "actions_escalate": "For example, start a second media player here. Runs once after N repeats or N snoozes.",
           "actions_snooze": "Runs immediately when Snooze is pressed; pause or stop the music here.",
           "actions_dismiss": "Runs after manual dismissal or confirmation by the motion sensor.",
+          "actions_timeout": "Runs when the safety timeout has been reached.",
           "actions_cleanup": "Final shared cleanup after dismissal or timeout."
         }
       },
       "review": {
         "title": "Review and create",
-        "description": "Step 7 of 7 · **{name}**\n\nAlarm source: `{source}`  \nConfigured conditions: **{guards}**  \nConfigured action phases: **{actions}**\n\nYou can change every section later from the integration options.",
+        "description": "Step 10 of 10 · **{name}**\n\nAlarm source: `{source}`  \nConditions and confirmation: **{guards}**  \nEvening reminder: **{reminder}**  \nMessages during the alarm: **{notifications}**  \nConfigured action situations: **{actions}**\n\nHoliday time shifts the alarm; Vacation blocks it completely. Every section remains editable from the integration options.",
         "data": { "confirm": "Create this alarm clock" }
       }
     },
     "error": {
-      "schedule_required": "Select a Schedule helper for this source.",
+      "schedule_required": "Select a schedule entity for this source.",
       "confirmation_required": "Confirm the summary before creating this alarm clock."
     }
   },
@@ -97,20 +191,22 @@
     "step": {
       "init": {
         "title": "Clock Advanced settings",
-        "description": "Open one section. Saving reloads this clock without restarting Home Assistant.",
+        "description": "All settings for this integration are grouped here by section. Saving reloads only this alarm clock.",
         "menu_options": {
-          "source": "Alarm source", "schedule": "Weekly schedule", "behavior": "Alarm lifecycle",
-          "guards": "Optional guards", "actions": "Action phases"
+          "source": "General & alarm source", "schedule": "Weekly schedule & Holiday time",
+          "guards": "When may the alarm start?", "start_actions": "Before & when the alarm starts",
+          "response": "Snooze & no response", "reminder": "Evening reminder",
+          "notifications": "Messages during the alarm", "finish_actions": "Getting up & safety end"
         }
       },
       "source": {
-        "title": "Alarm source",
-        "description": "Choose the internal weekly schedule or a Home Assistant Schedule helper. A helper is required for the Schedule-helper source.",
-        "data": { "schedule_source": "Alarm source", "schedule_entity": "Schedule helper" }
+        "title": "General & alarm source",
+        "description": "Change the name and choose either the built-in weekly schedule or an existing native Home Assistant schedule entity.",
+        "data": { "name": "Name", "schedule_source": "Alarm source", "schedule_entity": "Schedule entity (optional)" }
       },
       "schedule": {
         "title": "Weekly schedule",
-        "description": "Enable days independently. Holiday and non-workday times override only enabled days.",
+        "description": "Enable days independently. Holiday time has separate weekday and weekend/public-holiday times; Vacation turns the alarm off completely.",
         "data": {
           "monday_enabled": "Monday enabled", "monday_time": "Monday time",
           "tuesday_enabled": "Tuesday enabled", "tuesday_time": "Tuesday time",
@@ -119,7 +215,8 @@
           "friday_enabled": "Friday enabled", "friday_time": "Friday time",
           "saturday_enabled": "Saturday enabled", "saturday_time": "Saturday time",
           "sunday_enabled": "Sunday enabled", "sunday_time": "Sunday time",
-          "holiday_enabled": "Use holiday-mode time", "holiday_time": "Holiday-mode time",
+          "holiday_enabled": "Use Holiday time", "holiday_time": "Holiday time – weekdays",
+          "holiday_weekend_time": "Holiday time – weekends/public holidays",
           "non_workday_enabled": "Use non-workday time", "non_workday_time": "Non-workday time"
         }
       },
@@ -141,6 +238,54 @@
           "block_non_workdays": "Block completely on non-workdays", "start_conditions": "Alarm start conditions"
         }
       },
+      "start_actions": {
+        "title": "Before the alarm and when it starts",
+        "description": "Optional actions for gentle preparation and the actual alarm start.",
+        "data": { "actions_prepare": "Before the alarm", "actions_start": "When the alarm starts" }
+      },
+      "response": {
+        "title": "Snooze and when nobody responds",
+        "description": "Set pauses, reminders, escalation, and the corresponding optional actions.",
+        "data": {
+          "pre_alarm_minutes": "Preparation earlier (minutes)", "repeat_interval_minutes": "Remind again after (minutes)",
+          "escalate_after_repeats": "Stronger after repeats (0 = off)", "escalate_after_snoozes": "Stronger after snoozes (0 = off)",
+          "snooze_minutes": "Snooze period (minutes)", "max_snoozes": "Maximum snoozes (0 = off)",
+          "timeout_minutes": "Safety end (minutes)", "terminal_state_minutes": "Final status visible (minutes)",
+          "actions_repeat": "Action when reminding again", "actions_escalate": "Stronger action", "actions_snooze": "Action on Snooze"
+        }
+      },
+      "reminder": {
+        "title": "Reminder on the evening before",
+        "description": "Announces the exact next alarm. Phone recipients get Skip, one-time time change, and a direct link to the Clock Card.",
+        "data": {
+          "next_alarm_reminder_enabled": "Enable evening reminder",
+          "next_alarm_reminder_time": "Reminder time",
+          "dashboard_path": "Path to the Clock Card (optional)"
+        }
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Choose recipients and events. Clock Advanced automatically adds the time, state, and reason. Without recipients, messages appear in the Home Assistant notification inbox.",
+        "data": {
+          "notifications_enabled": "Enable notifications",
+          "notification_targets": "Recipients (optional)",
+          "notification_events": "Notify me when"
+        },
+        "data_description": {
+          "notifications_enabled": "Turns every alarm notification from this clock on or off.",
+          "notification_targets": "Notify entities such as phones; empty means the Home Assistant notification inbox.",
+          "notification_events": "Select exactly which state changes should send a message."
+        }
+      },
+      "finish_actions": {
+        "title": "Getting up and safety end",
+        "description": "Optional actions on dismissal, timeout, and final shutdown of every output.",
+        "data": {
+          "actions_dismiss": "When getting up or dismissing",
+          "actions_timeout": "At the safety end",
+          "actions_cleanup": "Always clean up last"
+        }
+      },
       "actions": {
         "title": "Action phases",
         "description": "Start also runs after every snooze; Snooze runs immediately when pressed; Escalate runs once after the configured repeat or snooze threshold.",
@@ -150,7 +295,7 @@
         }
       }
     },
-    "error": { "schedule_required": "Select a Schedule helper for this source." }
+    "error": { "schedule_required": "Select a schedule entity for this source." }
   },
   "entity": {
     "binary_sensor": { "alarm_active": { "name": "Alarm session active" } },
@@ -166,10 +311,16 @@
     } } },
     "switch": {
       "enabled": { "name": "Enabled" }, "skip_next": { "name": "Skip next alarm" },
-      "holiday_mode": { "name": "Holiday mode" }
+      "holiday_mode": { "name": "Holiday time" },
+      "vacation_mode": { "name": "Vacation mode" }
     }
   },
   "selector": {
-    "schedule_source": { "options": { "weekly": "Clock Advanced weekly schedule", "schedule_entity": "Home Assistant Schedule helper" } }
+    "schedule_source": { "options": { "weekly": "Clock Advanced weekly schedule", "schedule_entity": "Home Assistant schedule entity" } },
+    "notification_event": { "options": {
+      "prepare": "Pre-alarm starts", "start": "Alarm starts", "repeat": "Alarm repeats",
+      "escalate": "Escalation threshold reached", "snooze": "Snooze pressed", "dismiss": "Alarm dismissed or confirmed",
+      "timeout": "Safety timeout reached", "skipped": "Next alarm skipped", "blocked": "Blocked by a condition or Vacation", "error": "An action failed"
+    } }
   }
 }

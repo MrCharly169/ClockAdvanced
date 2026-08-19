@@ -1,0 +1,59 @@
+set_weekday_alarm:
+  name: Set weekday alarm
+  description: Update one day of the internal Clock Advanced weekly schedule.
+  fields:
+    entity_id:
+      name: Clock Advanced entity
+      description: Any entity belonging to the Clock Advanced alarm clock.
+      required: true
+      selector:
+        entity:
+          integration: clock_advanced
+    day:
+      name: Weekday
+      required: true
+      selector:
+        select:
+          options:
+            - monday
+            - tuesday
+            - wednesday
+            - thursday
+            - friday
+            - saturday
+            - sunday
+    time:
+      name: Alarm time
+      required: true
+      selector:
+        time:
+    enabled:
+      name: Enabled
+      description: Whether this weekday participates in the weekly schedule.
+      selector:
+        boolean:
+
+set_holiday_time:
+  name: Set Holiday time
+  description: Update the weekday or weekend/public-holiday time used while Holiday mode is active.
+  fields:
+    entity_id:
+      name: Clock Advanced entity
+      description: Any entity belonging to the Clock Advanced alarm clock.
+      required: true
+      selector:
+        entity:
+          integration: clock_advanced
+    scope:
+      name: Holiday time scope
+      required: true
+      selector:
+        select:
+          options:
+            - weekday
+            - weekend
+    time:
+      name: Alarm time
+      required: true
+      selector:
+        time:

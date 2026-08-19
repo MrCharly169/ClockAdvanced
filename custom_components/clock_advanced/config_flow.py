@@ -23,12 +23,19 @@ from .const import (
     CONF_ESCALATE_AFTER_SNOOZES,
     CONF_HOLIDAY_ENABLED,
     CONF_HOLIDAY_TIME,
+    CONF_HOLIDAY_WEEKEND_TIME,
     CONF_MAX_SNOOZES,
     CONF_NAME,
     CONF_NON_WORKDAY_ENABLED,
     CONF_NON_WORKDAY_TIME,
+    CONF_NOTIFICATION_EVENTS,
+    CONF_NOTIFICATION_TARGETS,
+    CONF_NOTIFICATIONS_ENABLED,
     CONF_PRE_ALARM_MINUTES,
     CONF_REPEAT_INTERVAL_MINUTES,
+    CONF_REMINDER_DASHBOARD_PATH,
+    CONF_REMINDER_ENABLED,
+    CONF_REMINDER_TIME,
     CONF_SCHEDULE_ENTITY,
     CONF_SCHEDULE_SOURCE,
     CONF_SNOOZE_MINUTES,
@@ -42,11 +49,16 @@ from .const import (
     DEFAULT_ALLOW_STATE,
     DEFAULT_BLOCK_STATE,
     DEFAULT_HOLIDAY_TIME,
+    DEFAULT_HOLIDAY_WEEKEND_TIME,
     DEFAULT_MAX_SNOOZES,
     DEFAULT_NAME,
     DEFAULT_NON_WORKDAY_TIME,
+    DEFAULT_NOTIFICATION_EVENTS,
+    DEFAULT_NOTIFICATIONS_ENABLED,
     DEFAULT_PRE_ALARM_MINUTES,
     DEFAULT_REPEAT_INTERVAL_MINUTES,
+    DEFAULT_REMINDER_ENABLED,
+    DEFAULT_REMINDER_TIME,
     DEFAULT_SCHEDULE_SOURCE,
     DEFAULT_SNOOZE_MINUTES,
     DEFAULT_TERMINAL_STATE_MINUTES,
@@ -54,6 +66,7 @@ from .const import (
     DEFAULT_WEEKDAY_TIME,
     DEFAULT_WEEKEND_TIME,
     DOMAIN,
+    NOTIFICATION_EVENTS,
     SCHEDULE_SOURCE_ENTITY,
     SCHEDULE_SOURCE_WEEKLY,
     WEEKDAYS,
@@ -95,7 +108,10 @@ def _helper_schedule_schema() -> vol.Schema:
 
 
 def _source_options_schema() -> vol.Schema:
-    fields = dict(_source_schema().schema)
+    fields: dict[Any, Any] = {
+        vol.Required(CONF_NAME, default=DEFAULT_NAME): selector.TextSelector()
+    }
+    fields.update(_source_schema().schema)
     fields[vol.Optional(CONF_SCHEDULE_ENTITY)] = selector.EntitySelector(
         selector.EntitySelectorConfig(domain="schedule")
     )
@@ -112,6 +128,9 @@ def _schedule_schema() -> vol.Schema:
         {
             vol.Required(CONF_HOLIDAY_ENABLED, default=True): selector.BooleanSelector(),
             vol.Required(CONF_HOLIDAY_TIME, default=DEFAULT_HOLIDAY_TIME): selector.TimeSelector(),
+            vol.Required(
+                CONF_HOLIDAY_WEEKEND_TIME, default=DEFAULT_HOLIDAY_WEEKEND_TIME
+            ): selector.TimeSelector(),
             vol.Required(CONF_NON_WORKDAY_ENABLED, default=True): selector.BooleanSelector(),
             vol.Required(
                 CONF_NON_WORKDAY_TIME, default=DEFAULT_NON_WORKDAY_TIME
@@ -185,10 +204,74 @@ def _actions_schema() -> vol.Schema:
     )
 
 
+def _start_actions_schema() -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Optional(action_key("prepare"), default=[]): selector.ActionSelector(),
+            vol.Optional(action_key("start"), default=[]): selector.ActionSelector(),
+        }
+    )
+
+
+def _response_schema() -> vol.Schema:
+    fields = dict(_behavior_schema().schema)
+    for phase in ("repeat", "escalate", "snooze"):
+        fields[vol.Optional(action_key(phase), default=[])] = selector.ActionSelector()
+    return vol.Schema(fields)
+
+
+def _finish_actions_schema() -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Optional(action_key(phase), default=[]): selector.ActionSelector()
+            for phase in ("dismiss", "timeout", "cleanup")
+        }
+    )
+
+
+def _reminder_schema() -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_REMINDER_ENABLED, default=DEFAULT_REMINDER_ENABLED
+            ): selector.BooleanSelector(),
+            vol.Required(
+                CONF_REMINDER_TIME, default=DEFAULT_REMINDER_TIME
+            ): selector.TimeSelector(),
+            vol.Optional(CONF_REMINDER_DASHBOARD_PATH): selector.TextSelector(),
+        }
+    )
+
+
+def _notifications_schema() -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_NOTIFICATIONS_ENABLED,
+                default=DEFAULT_NOTIFICATIONS_ENABLED,
+            ): selector.BooleanSelector(),
+            vol.Optional(CONF_NOTIFICATION_TARGETS, default=[]): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="notify", multiple=True)
+            ),
+            vol.Required(
+                CONF_NOTIFICATION_EVENTS,
+                default=list(DEFAULT_NOTIFICATION_EVENTS),
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=list(NOTIFICATION_EVENTS),
+                    multiple=True,
+                    mode=selector.SelectSelectorMode.LIST,
+                    translation_key="notification_event",
+                )
+            ),
+        }
+    )
+
+
 class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Create a generic advanced clock through a guided wizard."""
 
-    VERSION = 4
+    VERSION = 5
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}
@@ -239,7 +322,7 @@ class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> config_entries.ConfigFlowResult:
         if user_input is not None:
             self._data.update(user_input)
-            return await self.async_step_actions()
+            return await self.async_step_reminder()
         return self.async_show_form(step_id="behavior", data_schema=_behavior_schema())
 
     async def async_step_guards(
@@ -247,7 +330,7 @@ class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> config_entries.ConfigFlowResult:
         if user_input is not None:
             self._data.update(user_input)
-            return await self.async_step_behavior()
+            return await self.async_step_start_actions()
         return self.async_show_form(step_id="guards", data_schema=_guards_schema())
 
     async def async_step_actions(
@@ -257,6 +340,44 @@ class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._data.update(user_input)
             return await self.async_step_review()
         return self.async_show_form(step_id="actions", data_schema=_actions_schema())
+
+    async def async_step_notifications(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        if user_input is not None:
+            self._data.update(user_input)
+            return await self.async_step_finish_actions()
+        return self.async_show_form(
+            step_id="notifications", data_schema=_notifications_schema()
+        )
+
+    async def async_step_start_actions(self, user_input=None):
+        if user_input is not None:
+            self._data.update(user_input)
+            return await self.async_step_response()
+        return self.async_show_form(
+            step_id="start_actions", data_schema=_start_actions_schema()
+        )
+
+    async def async_step_response(self, user_input=None):
+        if user_input is not None:
+            self._data.update(user_input)
+            return await self.async_step_reminder()
+        return self.async_show_form(step_id="response", data_schema=_response_schema())
+
+    async def async_step_reminder(self, user_input=None):
+        if user_input is not None:
+            self._data.update(user_input)
+            return await self.async_step_notifications()
+        return self.async_show_form(step_id="reminder", data_schema=_reminder_schema())
+
+    async def async_step_finish_actions(self, user_input=None):
+        if user_input is not None:
+            self._data.update(user_input)
+            return await self.async_step_review()
+        return self.async_show_form(
+            step_id="finish_actions", data_schema=_finish_actions_schema()
+        )
 
     async def async_step_review(
         self, user_input: dict[str, Any] | None = None
@@ -301,11 +422,24 @@ class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._data.get(CONF_START_CONDITIONS) or []
         )
         action_count = sum(bool(self._data.get(action_key(phase))) for phase in ACTION_PHASES)
+        notification_events = self._data.get(CONF_NOTIFICATION_EVENTS) or []
+        if not self._data.get(CONF_NOTIFICATIONS_ENABLED):
+            notification_summary = "off"
+        elif self._data.get(CONF_NOTIFICATION_TARGETS):
+            notification_summary = f"{len(notification_events)} / notify entities"
+        else:
+            notification_summary = f"{len(notification_events)} / Home Assistant"
         return {
             "name": str(self._data[CONF_NAME]),
             "source": str(source_detail),
             "guards": str(guard_count),
             "actions": str(action_count),
+            "notifications": notification_summary,
+            "reminder": (
+                str(self._data.get(CONF_REMINDER_TIME, DEFAULT_REMINDER_TIME))[:5]
+                if self._data.get(CONF_REMINDER_ENABLED)
+                else "off"
+            ),
         }
 
     @staticmethod
@@ -317,14 +451,23 @@ class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class ClockAdvancedOptionsFlow(config_entries.OptionsFlowWithReload):
-    """Edit one configuration section at a time."""
+    """Edit one integration section at a time and reload the entry."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         return self.async_show_menu(
             step_id="init",
-            menu_options=["source", "schedule", "guards", "behavior", "actions"],
+            menu_options=[
+                "source",
+                "schedule",
+                "guards",
+                "start_actions",
+                "response",
+                "reminder",
+                "notifications",
+                "finish_actions",
+            ],
         )
 
     @property
@@ -335,6 +478,12 @@ class ClockAdvancedOptionsFlow(config_entries.OptionsFlowWithReload):
         return self.add_suggested_values_to_schema(schema, self._current)
 
     def _save(self, values: dict[str, Any], clear: tuple[str, ...] = ()):
+        if CONF_NAME in values:
+            title = str(values[CONF_NAME]).strip() or DEFAULT_NAME
+            values = {**values, CONF_NAME: title}
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, title=title
+            )
         data = dict(self.config_entry.options)
         for key in clear:
             data.pop(key, None)
@@ -342,7 +491,7 @@ class ClockAdvancedOptionsFlow(config_entries.OptionsFlowWithReload):
         return self.async_create_entry(data=data)
 
     async def async_step_source(self, user_input=None):
-        keys = (CONF_SCHEDULE_SOURCE, CONF_SCHEDULE_ENTITY)
+        keys = (CONF_NAME, CONF_SCHEDULE_SOURCE, CONF_SCHEDULE_ENTITY)
         if user_input is not None:
             if (
                 user_input.get(CONF_SCHEDULE_SOURCE) == SCHEDULE_SOURCE_ENTITY
@@ -373,6 +522,45 @@ class ClockAdvancedOptionsFlow(config_entries.OptionsFlowWithReload):
             step_id="behavior", data_schema=self._with_suggestions(_behavior_schema())
         )
 
+    async def async_step_start_actions(self, user_input=None):
+        keys = (action_key("prepare"), action_key("start"))
+        if user_input is not None:
+            return self._save(user_input, keys)
+        return self.async_show_form(
+            step_id="start_actions",
+            data_schema=self._with_suggestions(_start_actions_schema()),
+        )
+
+    async def async_step_response(self, user_input=None):
+        if user_input is not None:
+            return self._save(user_input)
+        return self.async_show_form(
+            step_id="response",
+            data_schema=self._with_suggestions(_response_schema()),
+        )
+
+    async def async_step_reminder(self, user_input=None):
+        keys = (
+            CONF_REMINDER_ENABLED,
+            CONF_REMINDER_TIME,
+            CONF_REMINDER_DASHBOARD_PATH,
+        )
+        if user_input is not None:
+            return self._save(user_input, keys)
+        return self.async_show_form(
+            step_id="reminder",
+            data_schema=self._with_suggestions(_reminder_schema()),
+        )
+
+    async def async_step_finish_actions(self, user_input=None):
+        keys = tuple(action_key(phase) for phase in ("dismiss", "timeout", "cleanup"))
+        if user_input is not None:
+            return self._save(user_input, keys)
+        return self.async_show_form(
+            step_id="finish_actions",
+            data_schema=self._with_suggestions(_finish_actions_schema()),
+        )
+
     async def async_step_guards(self, user_input=None):
         keys = (
             CONF_WORKDAY_SENSOR,
@@ -396,4 +584,17 @@ class ClockAdvancedOptionsFlow(config_entries.OptionsFlowWithReload):
             return self._save(user_input, keys)
         return self.async_show_form(
             step_id="actions", data_schema=self._with_suggestions(_actions_schema())
+        )
+
+    async def async_step_notifications(self, user_input=None):
+        keys = (
+            CONF_NOTIFICATIONS_ENABLED,
+            CONF_NOTIFICATION_TARGETS,
+            CONF_NOTIFICATION_EVENTS,
+        )
+        if user_input is not None:
+            return self._save(user_input, keys)
+        return self.async_show_form(
+            step_id="notifications",
+            data_schema=self._with_suggestions(_notifications_schema()),
         )

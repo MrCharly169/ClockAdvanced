@@ -85,6 +85,29 @@ function Set-LabNumber {
         -Body (@{ entity_id = $EntityId; value = $Value } | ConvertTo-Json) | Out-Null
 }
 
+function Set-LabWeekdayAlarm {
+    param(
+        [string]$EntityId,
+        [string]$Day,
+        [string]$Time,
+        [bool]$Enabled
+    )
+    Invoke-RestMethod -Method Post -Uri "$BaseUrl/api/services/clock_advanced/set_weekday_alarm" `
+        -Headers $Headers -ContentType "application/json" `
+        -Body (@{ entity_id = $EntityId; day = $Day; time = $Time; enabled = $Enabled } | ConvertTo-Json) | Out-Null
+}
+
+function Wait-LabWeekdayAlarm {
+    param([string]$EntityId, [string]$Day, [string]$Time, [int]$TimeoutSeconds = 5)
+    $Deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ((Get-Date) -lt $Deadline) {
+        $Current = (Get-LabState $EntityId).attributes.schedule | Where-Object { $_.day -eq $Day }
+        if ($Current.time.StartsWith($Time.Substring(0, 5))) { return }
+        Start-Sleep -Milliseconds 250
+    }
+    throw "$EntityId weekday $Day did not reach $Time"
+}
+
 $ConfigResult = Invoke-RestMethod -Method Post -Uri "$BaseUrl/api/config/core/check_config" `
     -Headers $Headers -ContentType "application/json" -Body "{}"
 if ($ConfigResult.result -ne "valid") {
@@ -145,8 +168,24 @@ $BlockOriginal = (Get-LabState $BlockEntity).state
 $NumericOriginal = [double](Get-LabState $NumericEntity).state
 $EnabledEntity = $Attributes.controls.enabled
 $EnabledOriginal = (Get-LabState $EnabledEntity).state
+$NativeVacationEntity = $Attributes.controls.vacation_mode
+$NativeVacationOriginal = (Get-LabState $NativeVacationEntity).state
+$FirstScheduleDay = $Attributes.schedule | Select-Object -First 1
+$OriginalWeekdayTime = $FirstScheduleDay.time
+$OriginalWeekdayEnabled = [bool]$FirstScheduleDay.enabled
+$TestWeekdayTime = if ($OriginalWeekdayTime.StartsWith("23:55")) { "23:50:00" } else {
+    ([datetime]::ParseExact($OriginalWeekdayTime.Substring(0, 5), "HH:mm", $null).AddMinutes(5)).ToString("HH:mm:ss")
+}
 
 try {
+    Invoke-LabService "switch" "turn_on" $NativeVacationEntity
+    Wait-LabState $Entity "vacation"
+    Invoke-LabService "switch" "turn_off" $NativeVacationEntity
+    Wait-LabState $Entity "scheduled"
+
+    Set-LabWeekdayAlarm $Entity $FirstScheduleDay.day $TestWeekdayTime $OriginalWeekdayEnabled
+    Wait-LabWeekdayAlarm $Entity $FirstScheduleDay.day $TestWeekdayTime
+
     Invoke-LabService "input_boolean" "turn_on" $VacationEntity
     Wait-LabState $Entity "vacation"
     Invoke-LabService "input_boolean" "turn_off" $VacationEntity
@@ -177,6 +216,8 @@ try {
     Restore-LabBoolean $BlockEntity $BlockOriginal
     Set-LabNumber $NumericEntity $NumericOriginal
     Restore-LabBoolean $EnabledEntity $EnabledOriginal
+    Restore-LabBoolean $NativeVacationEntity $NativeVacationOriginal
+    Set-LabWeekdayAlarm $Entity $FirstScheduleDay.day $OriginalWeekdayTime $OriginalWeekdayEnabled
 }
 
 Write-Output "Clock Advanced HA lab smoke test: PASS"
@@ -184,4 +225,4 @@ Write-Output "  HA configuration: $($ConfigResult.result)"
 Write-Output "  Status entity: $Entity"
 Write-Output "  Card contract: $($Attributes.card_contract)"
 Write-Output "  Card, Badge, and local brand: PASS"
-Write-Output "  Vacation, native state/not/numeric, and enabled guards: PASS (original states restored)"
+Write-Output "  Native Vacation, weekday editing, external Vacation, conditions, and enabled guards: PASS (original states restored)"

@@ -1,23 +1,81 @@
 const fs = require("fs");
 const path = require("path");
 
-class FakeShadow {
-  constructor() { this._innerHTML = ""; this._badge = null; this.writeCount = 0; }
-  set innerHTML(value) {
-    this._innerHTML = String(value || "");
-    this._badge = this._innerHTML.includes("<ha-badge") ? new FakeElement() : null;
-    this.writeCount += 1;
+class FakeStyle {
+  constructor() { this.values = new Map(); }
+  setProperty(name, value) { this.values.set(name, String(value)); }
+  getPropertyValue(name) { return this.values.get(name) || ""; }
+}
+class FakeClassList {
+  constructor(element) { this.element = element; }
+  _set() { return new Set(String(this.element.className || "").split(/\s+/).filter(Boolean)); }
+  toggle(name, force) {
+    const values = this._set();
+    const enabled = force === undefined ? !values.has(name) : Boolean(force);
+    if (enabled) values.add(name); else values.delete(name);
+    this.element.className = [...values].join(" ");
+    return enabled;
   }
-  get innerHTML() { return this._innerHTML; }
-  addEventListener() {}
-  querySelector(selector) { return selector === "ha-badge" ? this._badge : null; }
-  querySelectorAll() { return []; }
+  contains(name) { return this._set().has(name); }
 }
 class FakeElement {
-  constructor() { this.shadowRoot = null; this.listeners = new Map(); this.dispatchedEvents = []; }
+  constructor(selector = "") {
+    this.selector = selector;
+    this.shadowRoot = null;
+    this.listeners = new Map();
+    this.dispatchedEvents = [];
+    this.dataset = {};
+    this.style = new FakeStyle();
+    this.className = selector.startsWith(".") ? selector.slice(1) : "";
+    this.classList = new FakeClassList(this);
+    this.attributes = new Map();
+    this.textContent = "";
+    this.hidden = false;
+    this.disabled = false;
+    this.children = selector.startsWith("[data-day=")
+      ? [new FakeElement("span"), new FakeElement("strong")]
+      : [];
+  }
   attachShadow() { this.shadowRoot = new FakeShadow(); return this.shadowRoot; }
   addEventListener(type, handler) { this.listeners.set(type, handler); }
   dispatchEvent(event) { this.dispatchedEvents.push(event); return true; }
+  setAttribute(name, value) {
+    this.attributes.set(name, String(value));
+    if (name.startsWith("data-")) {
+      const key = name.slice(5).replace(/-([a-z])/g, (_match, letter) => letter.toUpperCase());
+      this.dataset[key] = String(value);
+    }
+  }
+  getAttribute(name) { return this.attributes.get(name) ?? null; }
+  querySelectorAll(selector) { return selector === "span,strong" ? this.children : []; }
+  closest(selector) {
+    if (selector === "ha-badge" && this.selector === "ha-badge") return this;
+    if (selector === "[data-action]" && this.dataset.action) return this;
+    if (selector === "[data-schedule-slider]" && this.selector === "[data-schedule-slider]") return this;
+    if (selector === "[data-schedule-time]" && this.selector === "[data-schedule-time]") return this;
+    return null;
+  }
+  focus() { global.document.activeElement = this; global.document.focusCalls += 1; }
+  scrollIntoView() { global.document.scrollCalls += 1; }
+}
+class FakeShadow {
+  constructor() { this._innerHTML = ""; this.writeCount = 0; this.nodes = new Map(); this.listeners = new Map(); }
+  set innerHTML(value) {
+    this._innerHTML = String(value || "");
+    this.writeCount += 1;
+  }
+  get innerHTML() { return this._innerHTML; }
+  addEventListener(type, handler) { this.listeners.set(type, handler); }
+  querySelector(selector) {
+    if (!this.nodes.has(selector)) {
+      const node = new FakeElement(selector);
+      const action = selector.match(/^\[data-action="([^"]+)"\]$/)?.[1];
+      if (action) node.dataset.action = action;
+      this.nodes.set(selector, node);
+    }
+    return this.nodes.get(selector);
+  }
+  querySelectorAll() { return []; }
 }
 global.HTMLElement = FakeElement;
 global.Event = class {
@@ -34,8 +92,15 @@ global.customElements = {
   define(name, ctor) { registry.set(name, ctor); },
   get(name) { return registry.get(name); },
 };
-global.window = { customCards: [], setInterval, clearInterval };
-global.document = { createElement(name) { const Ctor = registry.get(name); return Ctor ? new Ctor() : new FakeElement(); } };
+global.window = {
+  customCards: [], setInterval, clearInterval,
+  scroll() { global.document.scrollCalls += 1; },
+  scrollTo() { global.document.scrollCalls += 1; },
+};
+global.document = {
+  activeElement: null, focusCalls: 0, scrollCalls: 0,
+  createElement(name) { const Ctor = registry.get(name); return Ctor ? new Ctor() : new FakeElement(name); },
+};
 
 (async () => {
   const sourcePath = path.join(__dirname, "..", "custom_components", "clock_advanced", "frontend", "clock-advanced-card.js");
@@ -46,14 +111,230 @@ global.document = { createElement(name) { const Ctor = registry.get(name); retur
   if (!registry.get("clock-advanced-card-editor")) throw new Error("Editor was not registered");
   const Badge = registry.get("clock-advanced-badge");
   if (!Badge || !registry.get("clock-advanced-badge-editor")) throw new Error("Badge was not registered");
-  const hass = { states: { "sensor.clock_status": { state: "scheduled", attributes: { card_contract: 1, card_type: "custom:clock-advanced-card", controls: {}, schedule: [], name: "Bedroom clock", next_alarm: "2031-06-21T06:00:00+00:00" } } }, language: "en", callService: async () => {} };
+  const serviceCalls = [];
+  const hass = { states: { "sensor.clock_status": { state: "scheduled", last_updated: "2031-06-20T05:00:00+00:00", attributes: { card_contract: 1, card_type: "custom:clock-advanced-card", controls: {}, schedule: [], name: "Bedroom clock", next_alarm: "2031-06-21T06:00:00+00:00" } } }, language: "en", callService: async (...args) => { serviceCalls.push(args); } };
   const stub = Card.getStubConfig(hass);
   if (stub.entity !== "sensor.clock_status") throw new Error("Stub did not discover the status entity");
   if (stub.mode !== "easy") throw new Error("Easy is not the default Card mode");
   const instance = new Card();
   instance.setConfig(stub);
   instance.hass = hass;
-  if (instance.getCardSize() !== 7 || instance.getGridOptions().columns !== 12 || instance.getGridOptions().rows !== 7) throw new Error("Sizing API is invalid");
+  if (instance.getCardSize() !== 5 || instance.getGridOptions().columns !== 12
+    || "rows" in instance.getGridOptions() || "min_rows" in instance.getGridOptions()) throw new Error("Sizing API must allow automatic row measurement");
+  instance.setConfig({ ...stub, mode: "advanced" });
+  instance.hass = hass;
+  if (instance.getCardSize() !== 9 || "rows" in instance.getGridOptions() || instance.getGridOptions().max_columns !== 12) throw new Error("Advanced sizing must not reserve invisible rows");
+  if (source.includes('class="progress-panel"') || source.includes("data-prepare-progress") || source.includes("data-alarm-progress")) {
+    throw new Error("Decorative Prepare and Alarm bars are still rendered");
+  }
+  if (!["click", "input", "change"].every((type) => instance.shadowRoot.listeners.has(type))) throw new Error("Stable Shadow Root event delegation is incomplete");
+  const cardRenderCount = instance.shadowRoot.writeCount;
+  const cardRoot = instance.shadowRoot.querySelector("ha-card");
+  const animatedLogo = instance.shadowRoot.querySelector("[data-logo]");
+  if (!source.includes("ca-logo-ring") || !source.includes("prefers-reduced-motion:reduce")) {
+    throw new Error("The state-aware accessible logo animation is missing");
+  }
+  const focusedControl = instance.shadowRoot.querySelector('[data-action="toggle-details"]');
+  const controlMenu = instance.shadowRoot.querySelector("[data-control-menu]");
+  if (!controlMenu.hidden || instance._detailsOpen) throw new Error("Card options are not closed by default");
+  await instance._onClick({ target: focusedControl });
+  if (controlMenu.hidden || !instance._detailsOpen) throw new Error("Card options submenu did not open");
+  if (instance.shadowRoot.querySelector("ha-card") !== cardRoot) throw new Error("Opening options rebuilt the Card root");
+  const scrollContainer = { scrollTop: 240 };
+  let cardPatchCount = 0;
+  const originalCardPatch = instance._patch.bind(instance);
+  instance._patch = (...args) => { cardPatchCount += 1; return originalCardPatch(...args); };
+  focusedControl.focus();
+  const focusCallsAfterUserAction = document.focusCalls;
+  instance.hass = { ...hass, states: { ...hass.states, "sensor.clock_status": {
+    ...hass.states["sensor.clock_status"], last_updated: "2031-06-20T05:00:01+00:00",
+  } } };
+  if (instance.shadowRoot.writeCount !== cardRenderCount) throw new Error("Card rerendered for an irrelevant last_updated-only change");
+  if (cardPatchCount !== 0) throw new Error("Card patched for an invisible last_updated-only change");
+  if (instance.shadowRoot.querySelector("ha-card") !== cardRoot) throw new Error("Card root identity changed for an irrelevant update");
+  if (document.activeElement !== focusedControl) throw new Error("Card lost focus for an irrelevant update");
+  if (controlMenu.hidden || !instance._detailsOpen) throw new Error("Card closed the options submenu during an update");
+  const timeBefore = instance.shadowRoot.querySelector("[data-time]").textContent;
+  instance.hass = { ...hass, states: { ...hass.states, "sensor.clock_status": {
+    ...hass.states["sensor.clock_status"], attributes: {
+      ...hass.states["sensor.clock_status"].attributes, next_alarm: "2031-06-21T06:05:00+00:00",
+    },
+  } } };
+  if (instance.shadowRoot.writeCount !== cardRenderCount) throw new Error("Card rebuilt its DOM for a visible alarm-time change");
+  if (cardPatchCount !== 1) throw new Error("Card signature ignored a visible alarm-time change");
+  if (instance.shadowRoot.querySelector("[data-time]").textContent === timeBefore) throw new Error("Card ignored a visible alarm-time change");
+
+  const originalNow = Date.now;
+  const countdownBefore = instance.shadowRoot.querySelector("[data-countdown]").textContent;
+  Date.now = () => originalNow() + 2000;
+  instance._updateCountdown();
+  Date.now = originalNow;
+  const countdownAfter = instance.shadowRoot.querySelector("[data-countdown]").textContent;
+  if (countdownBefore === countdownAfter) throw new Error("Countdown did not update in place");
+
+  for (const state of ["vacation", "idle", "pre_alarm", "ringing", "snoozed"]) {
+    const attrs = {
+      ...hass.states["sensor.clock_status"].attributes,
+      active_since: "2031-06-21T05:55:00+00:00",
+      snooze_until: state === "snoozed" ? "2031-06-21T06:10:00+00:00" : null,
+      snooze_available: true,
+      repeat_count: 2,
+      snooze_count: 1,
+    };
+    instance.hass = { ...hass, states: { ...hass.states, "sensor.clock_status": { state, attributes: attrs } } };
+    if (instance.shadowRoot.querySelector("ha-card") !== cardRoot) throw new Error(`Card root changed in ${state}`);
+    if (instance.shadowRoot.querySelector("[data-logo]") !== animatedLogo) throw new Error(`Card logo changed in ${state}`);
+    if (instance.shadowRoot.writeCount !== cardRenderCount) throw new Error(`Card rebuilt its DOM in ${state}`);
+    if (document.activeElement !== focusedControl) throw new Error(`Card lost focus in ${state}`);
+    if (scrollContainer.scrollTop !== 240) throw new Error(`Dashboard scroll changed in ${state}`);
+    const activeState = ["pre_alarm", "ringing", "snoozed"].includes(state);
+    if (instance.shadowRoot.querySelector("[data-metrics]").hidden === activeState
+      || instance.shadowRoot.querySelector("[data-primary-actions]").hidden === activeState) {
+      throw new Error(`Card visibility group is inconsistent in ${state}`);
+    }
+  }
+
+  const rapidAttrs = {
+    ...hass.states["sensor.clock_status"].attributes,
+    controls: {
+      enabled: "switch.clock_enabled", skip_next: "switch.clock_skip",
+      holiday_mode: "switch.clock_holiday", vacation_mode: "switch.clock_vacation",
+      snooze: "button.clock_snooze", dismiss: "button.clock_dismiss",
+    },
+    guards: {
+      workday: "binary_sensor.workday", confirmation: "binary_sensor.motion", native_conditions: 2,
+    },
+    settings: { timeout_minutes: 30 },
+  };
+  for (let index = 0; index < 20; index += 1) {
+    instance.hass = { ...hass, states: {
+      ...hass.states,
+      "sensor.clock_status": { state: index % 2 ? "ringing" : "snoozed", attributes: rapidAttrs },
+      "switch.clock_enabled": { state: index % 2 ? "on" : "off", attributes: {} },
+      "switch.clock_skip": { state: index % 3 ? "off" : "on", attributes: {} },
+      "switch.clock_holiday": { state: "off", attributes: {} },
+      "switch.clock_vacation": { state: index % 2 ? "off" : "on", attributes: {} },
+      "binary_sensor.workday": { state: index % 2 ? "on" : "off", attributes: { friendly_name: "Workday" } },
+      "binary_sensor.motion": { state: "off", attributes: { friendly_name: "Motion" } },
+    } };
+  }
+  if (instance.shadowRoot.querySelector("ha-card") !== cardRoot || instance.shadowRoot.writeCount !== cardRenderCount) throw new Error("Rapid control and guard updates rebuilt the Card");
+  if (document.activeElement !== focusedControl || document.focusCalls !== focusCallsAfterUserAction) throw new Error("Card moved focus without user interaction");
+  if (scrollContainer.scrollTop !== 240 || document.scrollCalls !== 0) throw new Error("Card invoked scrolling during updates");
+  await instance._onClick({ target: focusedControl });
+  if (!controlMenu.hidden || instance._detailsOpen) throw new Error("Card options submenu did not close");
+
+  const weeklySchedule = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    .map((day) => ({ day, enabled: true, time: "06:30:00" }));
+  instance.hass = { ...hass, states: {
+    ...hass.states,
+    "sensor.clock_status": { state: "scheduled", attributes: {
+      ...rapidAttrs,
+      schedule: weeklySchedule,
+      schedule_source: "weekly",
+      settings: {
+        ...rapidAttrs.settings,
+        holiday_enabled: true,
+        holiday_time: "06:00:00",
+        holiday_weekend_time: "08:30:00",
+      },
+    } },
+    "switch.clock_holiday": { state: "on", attributes: {} },
+    "switch.clock_vacation": { state: "off", attributes: {} },
+  } };
+  const mondayTime = instance.shadowRoot.querySelector('[data-day="0"]').children[1];
+  if (mondayTime.textContent !== "06:00" || !instance.shadowRoot.querySelector("[data-schedule]").classList.contains("holiday-active")) {
+    throw new Error("Holiday mode did not update the effective weekly overview times");
+  }
+  const scheduleTimeInput = instance.shadowRoot.querySelector("[data-schedule-time]");
+  if (scheduleTimeInput.value !== "06:00"
+    || instance.shadowRoot.querySelector("[data-alarm-time-label]").textContent !== "Holiday time · weekdays") {
+    throw new Error("The schedule editor did not follow the effective weekday Holiday time");
+  }
+  scheduleTimeInput.value = "07:10";
+  await instance._onChange({ target: scheduleTimeInput });
+  const holidayWeekdayCall = serviceCalls.at(-1);
+  if (holidayWeekdayCall?.[0] !== "clock_advanced" || holidayWeekdayCall?.[1] !== "set_holiday_time"
+    || holidayWeekdayCall?.[2]?.scope !== "weekday" || holidayWeekdayCall?.[2]?.time !== "07:10:00") {
+    throw new Error("The effective weekday Holiday time was not saved through the integration service");
+  }
+  instance.hass = { ...instance._hass, states: {
+    ...instance._hass.states,
+    "sensor.clock_status": { state: "scheduled", attributes: {
+      ...instance._hass.states["sensor.clock_status"].attributes,
+      settings: {
+        ...instance._hass.states["sensor.clock_status"].attributes.settings,
+        holiday_time: "07:10:00",
+      },
+    } },
+  } };
+  if (scheduleTimeInput.value !== "07:10" || mondayTime.textContent !== "07:10") {
+    throw new Error("A changed weekday Holiday time did not refresh the editor and overview");
+  }
+  const sundayTime = instance.shadowRoot.querySelector('[data-day="6"]').children[1];
+  if (sundayTime.textContent !== "08:30") {
+    throw new Error("Holiday mode did not use the separate weekend and public-holiday time");
+  }
+  instance._selectedDay = 6;
+  instance._patch();
+  if (scheduleTimeInput.value !== "08:30"
+    || instance.shadowRoot.querySelector("[data-alarm-time-label]").textContent !== "Holiday time · weekends/public holidays") {
+    throw new Error("The schedule editor did not follow the effective weekend Holiday time");
+  }
+  scheduleTimeInput.value = "09:15";
+  await instance._onChange({ target: scheduleTimeInput });
+  const holidayWeekendCall = serviceCalls.at(-1);
+  if (holidayWeekendCall?.[1] !== "set_holiday_time" || holidayWeekendCall?.[2]?.scope !== "weekend"
+    || holidayWeekendCall?.[2]?.time !== "09:15:00") {
+    throw new Error("The effective weekend Holiday time was not saved through the integration service");
+  }
+  instance.hass = { ...instance._hass, states: {
+    ...instance._hass.states,
+    "sensor.clock_status": { state: "scheduled", attributes: {
+      ...instance._hass.states["sensor.clock_status"].attributes,
+      settings: {
+        ...instance._hass.states["sensor.clock_status"].attributes.settings,
+        holiday_weekend_time: "09:15:00",
+      },
+    } },
+  } };
+  if (scheduleTimeInput.value !== "09:15" || sundayTime.textContent !== "09:15") {
+    throw new Error("A changed weekend Holiday time did not refresh the editor and overview");
+  }
+  instance.hass = { ...instance._hass, states: {
+    ...instance._hass.states,
+    "switch.clock_holiday": { state: "off", attributes: {} },
+  } };
+  if (mondayTime.textContent !== "06:30" || sundayTime.textContent !== "06:30" || scheduleTimeInput.value !== "06:30") {
+    throw new Error("Disabling Holiday mode did not restore the normal weekly times");
+  }
+  if (!source.includes("::-webkit-date-and-time-value") || !source.includes("max-inline-size:100%")) {
+    throw new Error("The iPhone time input containment and centering styles are missing");
+  }
+  if (!source.includes("--ca-selection:#fbbf24")
+    || !source.includes(".day.selected span,.day.selected strong")) {
+    throw new Error("The selected weekday does not have its dedicated yellow marker");
+  }
+  const tuesdayButton = instance.shadowRoot.querySelector('[data-day="1"]');
+  tuesdayButton.dataset.action = "select-day";
+  tuesdayButton.dataset.day = "1";
+  await instance.shadowRoot.listeners.get("click")({
+    currentTarget: instance.shadowRoot,
+    target: tuesdayButton,
+    composedPath: () => [tuesdayButton, instance.shadowRoot],
+  });
+  if (instance._selectedDay !== 1) throw new Error("Delegated weekday selection did not update the editor");
+  instance._selectedDay = 0;
+  await instance._saveWeekday("07:35", false);
+  const scheduleCall = serviceCalls.at(-1);
+  if (scheduleCall?.[0] !== "clock_advanced" || scheduleCall?.[1] !== "set_weekday_alarm"
+    || scheduleCall?.[2]?.day !== "monday" || scheduleCall?.[2]?.time !== "07:35:00"
+    || scheduleCall?.[2]?.enabled !== false) throw new Error("Advanced Card did not save its weekday editor through the integration service");
+  await instance._onClick({ target: instance.shadowRoot.querySelector('[data-action="toggle-vacation"]') });
+  const vacationCall = serviceCalls.at(-1);
+  if (vacationCall?.[0] !== "homeassistant" || vacationCall?.[1] !== "toggle"
+    || vacationCall?.[2]?.entity_id !== "switch.clock_vacation") throw new Error("Vacation button did not toggle the native Vacation mode");
+  if (instance.shadowRoot.querySelector("ha-card") !== cardRoot || instance.shadowRoot.writeCount !== cardRenderCount) throw new Error("Schedule editing rebuilt the Card DOM");
   if (!Card.getConfigElement()) throw new Error("Editor API failed");
   const registration = window.customCards.find((item) => item.type === "clock-advanced-card");
   if (!registration) throw new Error("Card picker registration missing");
@@ -65,16 +346,43 @@ global.document = { createElement(name) { const Ctor = registry.get(name); retur
   const badge = new Badge();
   badge.setConfig(badgeStub);
   badge.hass = hass;
-  if (!badge.shadowRoot.innerHTML.includes('<ha-badge type="button" icon-only data-mode="scheduled"')
-    || !badge.shadowRoot.innerHTML.includes('class="clock-symbol" icon="mdi:alarm"')
-    || !badge.shadowRoot.innerHTML.includes('class="state-marker"><ha-icon icon="mdi:calendar-check"')
-    || !badge.shadowRoot.innerHTML.includes("Bedroom clock")
-    || !badge.shadowRoot.innerHTML.includes("Next alarm")) throw new Error("Badge lost its native Clock identity, state marker, or next alarm detail");
-  badge.shadowRoot.querySelector("ha-badge")?.listeners.get("click")?.(new Event("click"));
+  const badgeRoot = badge.shadowRoot.querySelector("ha-badge");
+  const badgeMarker = badge.shadowRoot.querySelector("[data-state-icon]");
+  if (badgeRoot.dataset.mode !== "scheduled"
+    || badgeMarker.getAttribute("icon") !== "mdi:calendar-check"
+    || !badgeRoot.getAttribute("title").includes("Bedroom clock")
+    || !badgeRoot.getAttribute("title").includes("Next alarm")) throw new Error("Badge lost its native Clock identity, state marker, or next alarm detail");
+  badgeRoot.listeners.get("click")?.(new Event("click"));
   if (badge.dispatchedEvents.at(-1)?.detail?.entityId !== "sensor.clock_status") throw new Error("Badge did not open the native entity details");
   const renderCount = badge.shadowRoot.writeCount;
+  let badgePatchCount = 0;
+  const originalBadgePatch = badge._patch.bind(badge);
+  badge._patch = (...args) => { badgePatchCount += 1; return originalBadgePatch(...args); };
   badge.hass = hass;
   if (badge.shadowRoot.writeCount !== renderCount) throw new Error("Badge rerendered although its relevant state did not change");
+  if (badgePatchCount !== 0) throw new Error("Badge patched although its relevant state did not change");
+  badge.hass = { ...hass, states: { ...hass.states, "sensor.clock_status": {
+    ...hass.states["sensor.clock_status"], last_updated: "2031-06-20T05:00:01+00:00",
+    attributes: { ...hass.states["sensor.clock_status"].attributes, diagnostic_only: "changed" },
+  } } };
+  if (badge.shadowRoot.writeCount !== renderCount) throw new Error("Badge rerendered for invisible timestamp or diagnostic changes");
+  if (badgePatchCount !== 0) throw new Error("Badge patched for invisible timestamp or diagnostic changes");
+  badgeRoot.focus();
+  const badgeFocusCalls = document.focusCalls;
+  for (const state of ["vacation", "idle", "pre_alarm", "ringing", "snoozed"]) {
+    badge.hass = { ...hass, states: { ...hass.states, "sensor.clock_status": {
+      state,
+      attributes: {
+        ...hass.states["sensor.clock_status"].attributes,
+        active_since: "2031-06-21T05:55:00+00:00",
+        snooze_until: state === "snoozed" ? "2031-06-21T06:10:00+00:00" : null,
+      },
+    } } };
+    if (badge.shadowRoot.querySelector("ha-badge") !== badgeRoot) throw new Error(`Badge root changed in ${state}`);
+    if (badge.shadowRoot.writeCount !== renderCount) throw new Error(`Badge rebuilt its DOM in ${state}`);
+    if (document.activeElement !== badgeRoot) throw new Error(`Badge lost focus in ${state}`);
+  }
+  if (document.focusCalls !== badgeFocusCalls || document.scrollCalls !== 0 || scrollContainer.scrollTop !== 240) throw new Error("Badge moved focus or Dashboard scroll during updates");
   const badgeModeCases = {
     idle: "mdi:minus", scheduled: "mdi:calendar-check", disabled: "mdi:power",
     vacation: "mdi:palm-tree", pre_alarm: "mdi:weather-sunset-up", ringing: "mdi:bell-ring",
@@ -94,9 +402,8 @@ global.document = { createElement(name) { const Ctor = registry.get(name); retur
         snooze_until: "2031-06-21T06:10:00+00:00",
       },
     } } };
-    if (!modeBadge.shadowRoot.innerHTML.includes(`data-mode="${mode}"`)
-      || !modeBadge.shadowRoot.innerHTML.includes('class="clock-symbol" icon="mdi:alarm"')
-      || !modeBadge.shadowRoot.innerHTML.includes(`class="state-marker"><ha-icon icon="${marker}"`)) throw new Error(`Badge mode ${mode} lost the stable alarm identity or state marker`);
+    if (modeBadge.shadowRoot.querySelector("ha-badge").dataset.mode !== mode
+      || modeBadge.shadowRoot.querySelector("[data-state-icon]").getAttribute("icon") !== marker) throw new Error(`Badge mode ${mode} lost the stable alarm identity or state marker`);
   }
   const badgeEditor = new (registry.get("clock-advanced-badge-editor"))();
   badgeEditor.setConfig(badgeStub);

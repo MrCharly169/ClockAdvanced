@@ -93,6 +93,7 @@ class ClockStatusSensor(ClockAdvancedEntity, SensorEntity):
             "enabled": self._entity("switch", "enabled"),
             "skip_next": self._entity("switch", "skip_next"),
             "holiday_mode": self._entity("switch", "holiday_mode"),
+            "vacation_mode": self._entity("switch", "vacation_mode"),
             "next_alarm": self._entity("datetime", "next_alarm"),
             "dismiss": self._entity("button", "dismiss"),
             "snooze": self._entity("button", "snooze"),
@@ -162,6 +163,11 @@ class ClockStatusSensor(ClockAdvancedEntity, SensorEntity):
                         CONF_ESCALATE_AFTER_SNOOZES,
                         DEFAULT_ESCALATE_AFTER_SNOOZES,
                     )
+                ),
+                "holiday_enabled": self.runtime.schedule.holiday_enabled,
+                "holiday_time": self.runtime.schedule.holiday_time.isoformat(),
+                "holiday_weekend_time": (
+                    self.runtime.schedule.holiday_weekend_time.isoformat()
                 ),
                 "block_non_workdays": bool(
                     self.runtime.config.get(CONF_BLOCK_NON_WORKDAYS, False)

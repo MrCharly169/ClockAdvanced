@@ -4,22 +4,25 @@
     "step": {
       "user": {
         "title": "Erweiterten Wecker anlegen",
-        "description": "Schritt 1 von 7 · Gib diesem eigenständigen Wecker einen eindeutigen Raum- oder Verwendungsnamen. Der Assistent führt dich durch Zeiten, Bedingungen, Verhalten und Aktionen.",
-        "data": { "name": "Name" }
+        "description": "Schritt 1 von 10 · Gib diesem Wecker einen eindeutigen Raum- oder Verwendungsnamen. Danach führt dich der Assistent durch den Ablauf aus Kundensicht.",
+        "data": { "name": "Name" },
+        "data_description": { "name": "Dieser Name erscheint bei Entitäten, auf der Card und in Benachrichtigungen, zum Beispiel „Wecker Schlafzimmer“." }
       },
       "source": {
         "title": "Weckzeit-Quelle auswählen",
-        "description": "Schritt 2 von 7 · Verwende exakte Weckzeiten von Clock Advanced oder starte beim Wechsel eines Home-Assistant-Zeitplan-Helfers von Aus zu Ein.",
-        "data": { "schedule_source": "Weckzeit-Quelle" }
+        "description": "Schritt 2 von 10 · Wähle, woher die Weckzeiten kommen. Für die einfachste Bedienung direkt auf der Advanced Card ist der Clock-Advanced-Wochenplan empfohlen.",
+        "data": { "schedule_source": "Weckzeit-Quelle" },
+        "data_description": { "schedule_source": "Clock Advanced: Zeiten pro Wochentag in Integration und Card bearbeiten. Home-Assistant-Zeitplan: vorhandene Zeitblöcke verwenden; Card-Zeitbearbeitung ist dann deaktiviert." }
       },
       "helper_schedule": {
-        "title": "Zeitplan-Helfer auswählen",
-        "description": "Schritt 3 von 7 · Der Wecker startet am Beginn jedes aktiven Zeitblocks. Den Helfer erstellst oder bearbeitest du unter Einstellungen → Geräte & Dienste → Helfer.",
-        "data": { "schedule_entity": "Zeitplan-Helfer" }
+        "title": "Home-Assistant-Zeitplan auswählen",
+        "description": "Schritt 3 von 10 · Der Wecker startet am Beginn jedes aktiven Zeitblocks der ausgewählten nativen Zeitplan-Entität.",
+        "data": { "schedule_entity": "Zeitplan-Entität" },
+        "data_description": { "schedule_entity": "Wähle den Zeitplan, dessen Blockbeginn als Wecktermin dienen soll. Änderungen erfolgen später im nativen Home-Assistant-Zeitplan." }
       },
       "schedule": {
         "title": "Wochenplan",
-        "description": "Schritt 3 von 7 · Aktiviere jeden Tag einzeln. Ferien- und Feiertagszeiten überschreiben nur aktivierte Tage.",
+        "description": "Schritt 3 von 10 · Aktiviere nur die gewünschten Tage und lege ihre normale Uhrzeit fest. Die Ferienzeit verschiebt den Wecker; Urlaub schaltet ihn dagegen vollständig aus.",
         "data": {
           "monday_enabled": "Montag aktiviert", "monday_time": "Montag – Uhrzeit",
           "tuesday_enabled": "Dienstag aktiviert", "tuesday_time": "Dienstag – Uhrzeit",
@@ -28,13 +31,21 @@
           "friday_enabled": "Freitag aktiviert", "friday_time": "Freitag – Uhrzeit",
           "saturday_enabled": "Samstag aktiviert", "saturday_time": "Samstag – Uhrzeit",
           "sunday_enabled": "Sonntag aktiviert", "sunday_time": "Sonntag – Uhrzeit",
-          "holiday_enabled": "Ferienzeit verwenden", "holiday_time": "Ferienzeit",
+          "holiday_enabled": "Ferienzeit verwenden", "holiday_time": "Ferienzeit – Werktage",
+          "holiday_weekend_time": "Ferienzeit – Wochenende/Feiertage",
           "non_workday_enabled": "Feiertagszeit verwenden", "non_workday_time": "Feiertagszeit"
+        },
+        "data_description": {
+          "holiday_enabled": "Wenn Ferienzeit auf der Card aktiv ist, bleibt der Wecker an und verwendet diese alternative Uhrzeit.",
+          "holiday_time": "Alternative Weckzeit von Montag bis Freitag, solange der Tag kein Feiertag ist.",
+          "holiday_weekend_time": "Alternative Weckzeit an Samstagen, Sonntagen und Feiertagen. Urlaub hingegen blockiert den Wecker vollständig.",
+          "non_workday_enabled": "Verwendet an freien Tagen eine spätere Uhrzeit, sofern ein Arbeitstag-Sensor ausgewählt ist.",
+          "non_workday_time": "Alternative Uhrzeit, wenn der Arbeitstag-Sensor Aus meldet."
         }
       },
       "behavior": {
         "title": "Weckablauf",
-        "description": "Wiederholungsrhythmus, Schlummern und das Zeitlimit des gesamten Weckvorgangs bleiben getrennt.",
+        "description": "Lege fest, wie sich der Wecker nach dem Start verhält. Wiederholungsrhythmus, Schlummern und das Zeitlimit des gesamten Vorgangs bleiben getrennt.",
         "data": {
           "pre_alarm_minutes": "Vorlauf Voralarm (Minuten)",
           "repeat_interval_minutes": "Wiederholungsintervall (Minuten)",
@@ -44,11 +55,21 @@
           "max_snoozes": "Maximales Schlummern (0 deaktiviert)",
           "timeout_minutes": "Sicherheitsabschaltung (Minuten)",
           "terminal_state_minutes": "Endstatus anzeigen (Minuten)"
+        },
+        "data_description": {
+          "pre_alarm_minutes": "Startet die Vorbereitungsaktionen so viele Minuten vor der Weckzeit; 0 deaktiviert den Voralarm.",
+          "repeat_interval_minutes": "Nach dieser Zeit läuft die Wiederholen-Aktion erneut, solange der Wecker aktiv ist.",
+          "escalate_after_repeats": "Nach so vielen Wiederholungen läuft einmalig Eskalieren; 0 schaltet diesen Auslöser aus.",
+          "escalate_after_snoozes": "Nach so vielen Schlummer-Vorgängen läuft einmalig Eskalieren; 0 schaltet diesen Auslöser aus.",
+          "snooze_minutes": "Dauer einer Schlummerpause.",
+          "max_snoozes": "Wie oft Schlummern erlaubt ist; 0 deaktiviert Schlummern vollständig.",
+          "timeout_minutes": "Beendet den gesamten Weckvorgang sicher nach dieser Zeit, einschließlich Schlummerpausen.",
+          "terminal_state_minutes": "So lange bleibt Beendet, Ausgelassen oder Zeitüberschreitung sichtbar."
         }
       },
       "guards": {
         "title": "Bedingungen und Sperren",
-        "description": "Schritt 4 von 7 · Unter Alarm-Startbedingungen verwendest du den normalen Home-Assistant-Bedingungseditor. Alle dort angelegten Bedingungen müssen erfüllt sein. Beispiel: Numerischer Zustand → zone.home → über 1.",
+        "description": "Schritt 4 von 10 · Optional: Lege fest, wann der Wecker erlaubt oder gesperrt ist. Ohne Auswahl startet er immer nach Zeitplan. Alle hinzugefügten Startbedingungen müssen erfüllt sein.",
         "data": {
           "workday_sensor": "Arbeitstag-Sensor", "vacation_entity": "Urlaubsmodus-Entität",
           "confirmation_sensor": "Aufsteh-Bestätigung",
@@ -63,6 +84,77 @@
           "start_conditions": "Diese nativen HA-Bedingungen werden vor Voralarm und Start geprüft. Numerische Zustände, Zustand, Zeit, Zone, Gerät, Template sowie UND/ODER/NICHT sind möglich."
         }
       },
+      "start_actions": {
+        "title": "Vor dem Wecker und beim Start",
+        "description": "Schritt 5 von 10 · Lege fest, was vor der Weckzeit und beim eigentlichen Klingeln passiert. Beide Felder sind optional; für Musik oder Licht verwendest du normale Home-Assistant-Aktionen.",
+        "data": {
+          "actions_prepare": "Vor dem Wecker (optional)",
+          "actions_start": "Wenn der Wecker startet"
+        },
+        "data_description": {
+          "actions_prepare": "Zum Beispiel Licht langsam einschalten. Der Zeitpunkt wird im nächsten Schritt über den Vorlauf festgelegt.",
+          "actions_start": "Zum Beispiel Musik auf dem ersten Lautsprecher starten. Diese Folge läuft nach jeder Schlummerpause erneut."
+        }
+      },
+      "response": {
+        "title": "Schlummern und wenn niemand reagiert",
+        "description": "Schritt 6 von 10 · Bestimme Schlummerpause, Wiederholung und einmalige Eskalation. Die Standardwerte sind bereits alltagstauglich; zusätzliche Aktionen sind optional.",
+        "data": {
+          "pre_alarm_minutes": "Vorbereitung beginnt vorher (Minuten)",
+          "repeat_interval_minutes": "Erneut erinnern nach (Minuten)",
+          "escalate_after_repeats": "Stärker reagieren nach Wiederholungen (0 = aus)",
+          "escalate_after_snoozes": "Stärker reagieren nach Schlummern (0 = aus)",
+          "snooze_minutes": "Dauer einer Schlummerpause (Minuten)",
+          "max_snoozes": "Wie oft Schlummern erlaubt ist (0 = aus)",
+          "timeout_minutes": "Sicherheitsende nach insgesamt (Minuten)",
+          "terminal_state_minutes": "Endstatus sichtbar lassen (Minuten)",
+          "actions_repeat": "Aktion bei erneuter Erinnerung (optional)",
+          "actions_escalate": "Stärkere Aktion, wenn niemand reagiert (optional)",
+          "actions_snooze": "Aktion beim Drücken von Schlummern (optional)"
+        },
+        "data_description": {
+          "actions_repeat": "Zum Beispiel dieselbe Musikausgabe erneut anstoßen.",
+          "actions_escalate": "Zum Beispiel zusätzlich einen zweiten Lautsprecher oder helleres Licht starten.",
+          "actions_snooze": "Zum Beispiel Musik für die Schlummerpause pausieren."
+        }
+      },
+      "reminder": {
+        "title": "Erinnerung am Vorabend",
+        "description": "Schritt 7 von 10 · Informiert am Vorabend über den nächsten Wecker. Dieser eigene Schalter muss aktiviert sein; die Empfängerauswahl im nächsten Schritt aktiviert die Erinnerung nicht automatisch. Auf Smartphones lässt sich der Termin auslassen, einmalig per HH:MM ändern oder direkt öffnen.",
+        "data": {
+          "next_alarm_reminder_enabled": "Vorabend-Erinnerung aktivieren",
+          "next_alarm_reminder_time": "Uhrzeit der Erinnerung",
+          "dashboard_path": "Pfad zur Clock Card (optional)"
+        },
+        "data_description": {
+          "next_alarm_reminder_enabled": "Muss eingeschaltet sein, damit die Vorabend-Erinnerung geplant wird. Die allgemeinen Alarmmeldungen sind davon unabhängig.",
+          "next_alarm_reminder_time": "Uhrzeit am Kalendertag vor dem Wecker, empfohlen 19:00 Uhr.",
+          "dashboard_path": "Zum Beispiel /lovelace-bedroom/alarm. Leer öffnet die Clock-Advanced-Integration."
+        }
+      },
+      "notifications": {
+        "title": "Benachrichtigungen",
+        "description": "Schritt 8 von 10 · Wähle Empfänger und nur die wichtigen Meldungen während des Weckvorgangs. Die separate Vorabend-Erinnerung verwendet dieselben Empfänger. Ohne Empfänger erscheint alles im Home-Assistant-Benachrichtigungseingang.",
+        "data": {
+          "notifications_enabled": "Benachrichtigungen aktivieren",
+          "notification_targets": "Empfänger (optional)",
+          "notification_events": "Benachrichtigen bei"
+        },
+        "data_description": {
+          "notifications_enabled": "Hauptschalter für alle Alarmmeldungen dieses Weckers.",
+          "notification_targets": "Optional eine oder mehrere Notify-Entitäten auswählen, etwa ein Smartphone. Leer lassen für den Home-Assistant-Benachrichtigungseingang.",
+          "notification_events": "Nur die ausgewählten Ereignisse senden eine Meldung. Bei Blockiert nennt Clock Advanced auch die nicht erfüllte Bedingung."
+        }
+      },
+      "finish_actions": {
+        "title": "Beim Aufstehen und am Sicherheitsende",
+        "description": "Schritt 9 von 10 · Lege optional fest, was beim Beenden, bei Zeitüberschreitung und ganz zum Schluss aufgeräumt wird. Aufräumen sollte Medien und Licht zuverlässig ausschalten.",
+        "data": {
+          "actions_dismiss": "Beim Aufstehen oder manuellen Beenden",
+          "actions_timeout": "Wenn niemand bis zum Sicherheitsende reagiert",
+          "actions_cleanup": "Immer zuletzt aufräumen"
+        }
+      },
       "actions": {
         "title": "Aktionsphasen",
         "description": "Optionale Aktionen für Automationen, Musik und Licht. Leere Felder sind völlig in Ordnung. Start läuft beim ersten Klingeln und nach jedem abgelaufenen Schlummern erneut.",
@@ -73,22 +165,24 @@
           "actions_timeout": "Zeitüberschreitung", "actions_cleanup": "Aufräumen"
         },
         "data_description": {
+          "actions_prepare": "Zum Beispiel Licht langsam einschalten, bevor der eigentliche Wecker startet.",
           "actions_start": "Hier Musik auf dem ersten Media Player starten. Diese Folge läuft auch nach Ende der Schlummerdauer erneut.",
           "actions_repeat": "Optional dieselbe Ausgabe während des Klingelns erneut anstoßen.",
           "actions_escalate": "Hier zum Beispiel einen zweiten Media Player starten. Läuft einmalig nach N Wiederholungen oder N Schlummern.",
           "actions_snooze": "Läuft sofort beim Drücken von Schlummern; hier Musik pausieren oder stoppen.",
           "actions_dismiss": "Läuft bei manuellem Beenden oder Bestätigung durch den Bewegungsmelder.",
+          "actions_timeout": "Läuft, wenn das Sicherheitsende erreicht wurde.",
           "actions_cleanup": "Letzte gemeinsame Aufräumfolge nach Beenden oder Zeitüberschreitung."
         }
       },
       "review": {
         "title": "Prüfen und anlegen",
-        "description": "Schritt 7 von 7 · **{name}**\n\nWeckzeit-Quelle: `{source}`  \nKonfigurierte Bedingungen: **{guards}**  \nKonfigurierte Aktionsphasen: **{actions}**\n\nAlle Bereiche können später über die Integrationsoptionen geändert werden.",
+        "description": "Schritt 10 von 10 · **{name}**\n\nWeckzeit-Quelle: `{source}`  \nBedingungen und Bestätigung: **{guards}**  \nVorabend-Erinnerung: **{reminder}**  \nMeldungen während des Weckers: **{notifications}**  \nEingerichtete Aktionssituationen: **{actions}**\n\nFerienzeit verschiebt die Uhrzeit; Urlaub blockiert den Wecker vollständig. Alle Bereiche bleiben später in den Integrationsoptionen änderbar.",
         "data": { "confirm": "Diesen Wecker anlegen" }
       }
     },
     "error": {
-      "schedule_required": "Wähle für diese Quelle einen Zeitplan-Helfer aus.",
+      "schedule_required": "Wähle für diese Quelle eine Zeitplan-Entität aus.",
       "confirmation_required": "Bestätige die Zusammenfassung, bevor dieser Wecker angelegt wird."
     }
   },
@@ -96,20 +190,22 @@
     "step": {
       "init": {
         "title": "Clock-Advanced-Einstellungen",
-        "description": "Öffne einen Bereich. Nach dem Speichern wird nur dieser Wecker neu geladen.",
+        "description": "Alle Einstellungen dieser Integration sind hier nach Bereichen gegliedert. Beim Speichern wird nur dieser Wecker neu geladen.",
         "menu_options": {
-          "source": "Weckzeit-Quelle", "schedule": "Wochenplan", "behavior": "Weckablauf",
-          "guards": "Optionale Bedingungen", "actions": "Aktionsphasen"
+          "source": "Allgemein & Zeitquelle", "schedule": "Wochenplan & Ferienzeit",
+          "guards": "Wann darf der Wecker starten?", "start_actions": "Vor dem Wecker & beim Start",
+          "response": "Schlummern & wenn niemand reagiert", "reminder": "Erinnerung am Vorabend",
+          "notifications": "Meldungen während des Weckers", "finish_actions": "Aufstehen & Sicherheitsende"
         }
       },
       "source": {
-        "title": "Weckzeit-Quelle",
-        "description": "Wähle den internen Wochenplan oder einen Home-Assistant-Zeitplan-Helfer. Für die Helfer-Quelle muss ein Zeitplan ausgewählt sein.",
-        "data": { "schedule_source": "Weckzeit-Quelle", "schedule_entity": "Zeitplan-Helfer" }
+        "title": "Allgemein & Zeitquelle",
+        "description": "Ändere den Namen und wähle entweder den integrierten Wochenplan oder eine vorhandene native Home-Assistant-Zeitplan-Entität.",
+        "data": { "name": "Name", "schedule_source": "Weckzeit-Quelle", "schedule_entity": "Zeitplan-Entität (optional)" }
       },
       "schedule": {
         "title": "Wochenplan",
-        "description": "Aktiviere jeden Tag einzeln. Ferien- und Feiertagszeiten überschreiben nur aktivierte Tage.",
+        "description": "Aktiviere jeden Tag einzeln. Für die Ferienzeit gibt es getrennte Uhrzeiten für Werktage und für Wochenende/Feiertage; Urlaub schaltet den Wecker vollständig aus.",
         "data": {
           "monday_enabled": "Montag aktiviert", "monday_time": "Montag – Uhrzeit",
           "tuesday_enabled": "Dienstag aktiviert", "tuesday_time": "Dienstag – Uhrzeit",
@@ -118,7 +214,8 @@
           "friday_enabled": "Freitag aktiviert", "friday_time": "Freitag – Uhrzeit",
           "saturday_enabled": "Samstag aktiviert", "saturday_time": "Samstag – Uhrzeit",
           "sunday_enabled": "Sonntag aktiviert", "sunday_time": "Sonntag – Uhrzeit",
-          "holiday_enabled": "Ferienzeit verwenden", "holiday_time": "Ferienzeit",
+          "holiday_enabled": "Ferienzeit verwenden", "holiday_time": "Ferienzeit – Werktage",
+          "holiday_weekend_time": "Ferienzeit – Wochenende/Feiertage",
           "non_workday_enabled": "Feiertagszeit verwenden", "non_workday_time": "Feiertagszeit"
         }
       },
@@ -140,6 +237,54 @@
           "block_non_workdays": "An Nicht-Arbeitstagen vollständig sperren", "start_conditions": "Alarm-Startbedingungen"
         }
       },
+      "start_actions": {
+        "title": "Vor dem Wecker und beim Start",
+        "description": "Optionale Aktionen für sanfte Vorbereitung und den eigentlichen Weckstart.",
+        "data": { "actions_prepare": "Vor dem Wecker", "actions_start": "Wenn der Wecker startet" }
+      },
+      "response": {
+        "title": "Schlummern und wenn niemand reagiert",
+        "description": "Lege Pausen, Wiederholungen, Eskalation und die zugehörigen optionalen Aktionen fest.",
+        "data": {
+          "pre_alarm_minutes": "Vorbereitung vorher (Minuten)", "repeat_interval_minutes": "Erneut erinnern nach (Minuten)",
+          "escalate_after_repeats": "Stärker nach Wiederholungen (0 = aus)", "escalate_after_snoozes": "Stärker nach Schlummern (0 = aus)",
+          "snooze_minutes": "Schlummerpause (Minuten)", "max_snoozes": "Maximales Schlummern (0 = aus)",
+          "timeout_minutes": "Sicherheitsende (Minuten)", "terminal_state_minutes": "Endstatus sichtbar (Minuten)",
+          "actions_repeat": "Aktion bei erneuter Erinnerung", "actions_escalate": "Stärkere Aktion", "actions_snooze": "Aktion beim Schlummern"
+        }
+      },
+      "reminder": {
+        "title": "Erinnerung am Vorabend",
+        "description": "Informiert über den exakten nächsten Wecker. Smartphone-Empfänger erhalten Auslassen, einmalige Zeitänderung und einen Link zur Clock Card.",
+        "data": {
+          "next_alarm_reminder_enabled": "Vorabend-Erinnerung aktivieren",
+          "next_alarm_reminder_time": "Uhrzeit der Erinnerung",
+          "dashboard_path": "Pfad zur Clock Card (optional)"
+        }
+      },
+      "notifications": {
+        "title": "Benachrichtigungen",
+        "description": "Lege Empfänger und Ereignisse fest. Clock Advanced ergänzt automatisch Zeitpunkt, Zustand und Grund. Ohne Empfänger werden Meldungen im Home-Assistant-Benachrichtigungseingang angezeigt.",
+        "data": {
+          "notifications_enabled": "Benachrichtigungen aktivieren",
+          "notification_targets": "Empfänger (optional)",
+          "notification_events": "Benachrichtigen bei"
+        },
+        "data_description": {
+          "notifications_enabled": "Schaltet alle Alarmmeldungen dieses Weckers ein oder aus.",
+          "notification_targets": "Notify-Entitäten wie Smartphones; leer bedeutet Home-Assistant-Benachrichtigungseingang.",
+          "notification_events": "Wähle exakt die Zustandswechsel, über die du informiert werden möchtest."
+        }
+      },
+      "finish_actions": {
+        "title": "Aufstehen und Sicherheitsende",
+        "description": "Optionale Aktionen beim Beenden, bei Zeitüberschreitung und für das abschließende Ausschalten aller Ausgaben.",
+        "data": {
+          "actions_dismiss": "Beim Aufstehen oder Beenden",
+          "actions_timeout": "Am Sicherheitsende",
+          "actions_cleanup": "Immer zuletzt aufräumen"
+        }
+      },
       "actions": {
         "title": "Aktionsphasen",
         "description": "Start läuft auch nach jedem Snooze erneut; Schlummern sofort beim Tastendruck; Eskalieren einmalig nach dem eingestellten Wiederholungs- oder Snooze-Grenzwert.",
@@ -149,7 +294,7 @@
         }
       }
     },
-    "error": { "schedule_required": "Wähle für diese Quelle einen Zeitplan-Helfer aus." }
+    "error": { "schedule_required": "Wähle für diese Quelle eine Zeitplan-Entität aus." }
   },
   "entity": {
     "binary_sensor": { "alarm_active": { "name": "Weckvorgang aktiv" } },
@@ -165,10 +310,16 @@
     } } },
     "switch": {
       "enabled": { "name": "Aktiviert" }, "skip_next": { "name": "Nächsten Wecker überspringen" },
-      "holiday_mode": { "name": "Ferienmodus" }
+      "holiday_mode": { "name": "Ferienzeit" },
+      "vacation_mode": { "name": "Urlaubsmodus" }
     }
   },
   "selector": {
-    "schedule_source": { "options": { "weekly": "Clock-Advanced-Wochenplan", "schedule_entity": "Home-Assistant-Zeitplan-Helfer" } }
+    "schedule_source": { "options": { "weekly": "Clock-Advanced-Wochenplan", "schedule_entity": "Home-Assistant-Zeitplan-Entität" } },
+    "notification_event": { "options": {
+      "prepare": "Voralarm beginnt", "start": "Wecker startet", "repeat": "Wecker wiederholt",
+      "escalate": "Eskalationsgrenze erreicht", "snooze": "Schlummern gedrückt", "dismiss": "Wecker beendet oder bestätigt",
+      "timeout": "Sicherheitsende erreicht", "skipped": "Nächster Wecker ausgelassen", "blocked": "Durch Bedingung oder Urlaub blockiert", "error": "Eine Aktion ist fehlgeschlagen"
+    } }
   }
 }

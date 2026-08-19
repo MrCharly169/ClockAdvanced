@@ -10,8 +10,19 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_STATE_CHANGED
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
-from homeassistant.helpers import condition
+from homeassistant.core import (
+    Context,
+    Event,
+    EventStateChangedData,
+    HomeAssistant,
+    callback,
+)
+from homeassistant.helpers import (
+    condition,
+    config_validation as cv,
+    device_registry as dr,
+    entity_registry as er,
+)
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
     async_track_point_in_utc_time,
@@ -20,7 +31,7 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.helpers.script import Script, async_validate_actions_config
 from homeassistant.helpers.storage import Store
-from homeassistant.util import dt as dt_util
+from homeassistant.util import dt as dt_util, slugify
 
 from .const import (
     ACTION_PHASES,
@@ -35,9 +46,16 @@ from .const import (
     CONF_ESCALATE_AFTER_SNOOZES,
     CONF_HOLIDAY_ENABLED,
     CONF_HOLIDAY_TIME,
+    CONF_HOLIDAY_WEEKEND_TIME,
     CONF_MAX_SNOOZES,
     CONF_NON_WORKDAY_ENABLED,
     CONF_NON_WORKDAY_TIME,
+    CONF_NOTIFICATION_EVENTS,
+    CONF_NOTIFICATION_TARGETS,
+    CONF_NOTIFICATIONS_ENABLED,
+    CONF_REMINDER_DASHBOARD_PATH,
+    CONF_REMINDER_ENABLED,
+    CONF_REMINDER_TIME,
     CONF_PRE_ALARM_MINUTES,
     CONF_REPEAT_INTERVAL_MINUTES,
     CONF_SCHEDULE_ENTITY,
@@ -53,8 +71,13 @@ from .const import (
     DEFAULT_ALLOW_STATE,
     DEFAULT_BLOCK_STATE,
     DEFAULT_HOLIDAY_TIME,
+    DEFAULT_HOLIDAY_WEEKEND_TIME,
     DEFAULT_MAX_SNOOZES,
     DEFAULT_NON_WORKDAY_TIME,
+    DEFAULT_NOTIFICATION_EVENTS,
+    DEFAULT_NOTIFICATIONS_ENABLED,
+    DEFAULT_REMINDER_ENABLED,
+    DEFAULT_REMINDER_TIME,
     DEFAULT_PRE_ALARM_MINUTES,
     DEFAULT_REPEAT_INTERVAL_MINUTES,
     DEFAULT_SCHEDULE_SOURCE,
@@ -65,6 +88,7 @@ from .const import (
     DEFAULT_WEEKEND_TIME,
     DOMAIN,
     EVENT_PHASE,
+    EVENT_NOTIFICATION_ACTION,
     PHASE_CLEANUP,
     PHASE_DISMISS,
     PHASE_ERROR,
@@ -75,6 +99,7 @@ from .const import (
     PHASE_SNOOZE,
     PHASE_START,
     PHASE_TIMEOUT,
+    NOTIFICATION_EVENTS,
     SCHEDULE_SOURCE_ENTITY,
     SIGNAL_UPDATE,
     STATUS_DISABLED,
@@ -107,6 +132,7 @@ class ClockState:
     enabled: bool = True
     skip_next: bool = False
     holiday_mode: bool = False
+    vacation_mode: bool = False
     status: str = STATUS_IDLE
     manual_alarm: str | None = None
     active_since: str | None = None
@@ -121,6 +147,7 @@ class ClockState:
     last_error: str | None = None
     schedule_event_token: str | None = None
     card_notification_sent: bool = False
+    reminder_sent_for: str | None = None
 
 
 class ClockRuntime:
@@ -143,6 +170,7 @@ class ClockRuntime:
         self._cancel_repeat: Callable[[], None] | None = None
         self._cancel_timeout: Callable[[], None] | None = None
         self._cancel_status_reset: Callable[[], None] | None = None
+        self._cancel_reminder: Callable[[], None] | None = None
 
     @property
     def config(self) -> dict[str, Any]:
@@ -176,6 +204,12 @@ class ClockRuntime:
             tuple(days),
             holiday_enabled=bool(config.get(CONF_HOLIDAY_ENABLED, True)),
             holiday_time=parse_time(config.get(CONF_HOLIDAY_TIME, DEFAULT_HOLIDAY_TIME)),
+            holiday_weekend_time=parse_time(
+                config.get(
+                    CONF_HOLIDAY_WEEKEND_TIME,
+                    config.get(CONF_NON_WORKDAY_TIME, DEFAULT_HOLIDAY_WEEKEND_TIME),
+                )
+            ),
             non_workday_enabled=bool(config.get(CONF_NON_WORKDAY_ENABLED, True)),
             non_workday_time=parse_time(
                 config.get(CONF_NON_WORKDAY_TIME, DEFAULT_NON_WORKDAY_TIME)
@@ -221,6 +255,9 @@ class ClockRuntime:
                 ),
                 async_track_time_change(
                     self.hass, self._handle_calendar_refresh, hour=16, minute=0, second=0
+                ),
+                self.hass.bus.async_listen(
+                    EVENT_NOTIFICATION_ACTION, self._handle_notification_action
                 ),
             ]
         )
@@ -269,7 +306,10 @@ class ClockRuntime:
     async def _async_build_scripts(self) -> None:
         for phase in ACTION_PHASES:
             sequence = self.config.get(action_key(phase)) or []
-            validated = await async_validate_actions_config(self.hass, list(sequence))
+            static_validated = cv.SCRIPT_SCHEMA(list(sequence))
+            validated = await async_validate_actions_config(
+                self.hass, static_validated
+            )
             self._scripts[phase] = Script(
                 self.hass,
                 validated,
@@ -301,7 +341,9 @@ class ClockRuntime:
 
     def _guard_block_reason(self) -> str | None:
         config = self.config
-        if self._state_is_on(config.get(CONF_VACATION_ENTITY)):
+        if self.state.vacation_mode or self._state_is_on(
+            config.get(CONF_VACATION_ENTITY)
+        ):
             return "vacation"
         workday = config.get(CONF_WORKDAY_SENSOR)
         if (
@@ -403,6 +445,8 @@ class ClockRuntime:
         if self.state.status in ACTIVE_STATUSES:
             self._updated()
             return
+        previous_status = self.state.status
+        previous_reason = self.state.last_reason
         if clear_manual:
             self.state.manual_alarm = None
         now = dt_util.now()
@@ -494,6 +538,12 @@ class ClockRuntime:
                     self._cancel_alarm = async_track_point_in_utc_time(
                         self.hass, self._handle_alarm_due, self.next_alarm.astimezone(UTC)
                     )
+        if (
+            self.state.status in {STATUS_BLOCKED, STATUS_VACATION}
+            and (previous_status != self.state.status or previous_reason != block_reason)
+        ):
+            self._launch_notification("blocked", reason=block_reason)
+        self._schedule_next_alarm_reminder()
         self._updated()
 
     async def async_set_enabled(self, enabled: bool) -> None:
@@ -514,6 +564,14 @@ class ClockRuntime:
         self.state.holiday_mode = enabled
         await self.async_refresh_schedule()
 
+    async def async_set_vacation_mode(self, enabled: bool) -> None:
+        """Enable or disable the integration-owned vacation blocker."""
+        self.state.vacation_mode = enabled
+        if enabled and self.state.status in ACTIVE_STATUSES:
+            await self.async_dismiss("vacation")
+        else:
+            await self.async_refresh_schedule()
+
     async def async_set_manual_alarm(self, value: datetime) -> None:
         if value.tzinfo is None:
             value = value.replace(tzinfo=dt_util.now().tzinfo)
@@ -522,6 +580,8 @@ class ClockRuntime:
 
     async def async_recalculate_schedule(self) -> None:
         """Clear a one-time override and recalculate the recurring source."""
+        self.state.skipped_alarm = None
+        self.state.skip_next = False
         await self.async_refresh_schedule(clear_manual=True)
 
     async def async_snooze(self) -> None:
@@ -546,8 +606,7 @@ class ClockRuntime:
         self._updated()
 
     async def async_dismiss(self, reason: str = "manual", *, timed_out: bool = False) -> None:
-        was_active = self.state.status in ACTIVE_STATUSES
-        if not was_active:
+        if self.state.status not in ACTIVE_STATUSES:
             return
         self._cancel_timers()
         self.state.status = STATUS_TIMEOUT if timed_out else STATUS_DISMISSED
@@ -557,24 +616,154 @@ class ClockRuntime:
         self.state.occurrence_alarm = None
         self.next_alarm = None
         self.pre_alarm_at = None
-        if was_active:
-            phase = PHASE_TIMEOUT if timed_out else PHASE_DISMISS
-            self.hass.async_create_task(self._async_terminal_actions(phase, reason))
+        phase = PHASE_TIMEOUT if timed_out else PHASE_DISMISS
+        # Publish the terminal state immediately, but keep the service call alive
+        # until Dismiss/Timeout and the shared Cleanup sequence have both finished.
+        # This makes button, mobile Card, confirmation sensor, and blocker exits use
+        # one guaranteed completion path instead of a detachable background task.
+        self._updated()
+        await self._async_terminal_actions(phase, reason)
         await self.async_refresh_schedule(clear_manual=True)
         self.state.status = STATUS_TIMEOUT if timed_out else STATUS_DISMISSED
+        # Schedule calculation may clear the reason when a following alarm exists.
+        # Keep the completed session's reason visible while its terminal status is
+        # shown so users and diagnostics can tell whether Card or confirmation won.
+        self.state.last_reason = reason
         self._schedule_status_reset()
         self._updated()
 
     async def _async_terminal_actions(self, phase: str, reason: str) -> None:
+        action_context = Context()
         self._fire_phase(phase, reason=reason)
-        await self._async_run_phase(phase, reason=reason)
+        await self._async_run_phase(phase, context=action_context, reason=reason)
         self._fire_phase(PHASE_CLEANUP, reason=reason)
-        await self._async_run_phase(PHASE_CLEANUP, reason=reason)
+        await self._async_run_phase(
+            PHASE_CLEANUP, context=action_context, reason=reason
+        )
         self._updated()
 
     @callback
     def _handle_calendar_refresh(self, _now: datetime) -> None:
         self.hass.async_create_task(self.async_refresh_schedule())
+
+    def _schedule_next_alarm_reminder(self) -> None:
+        """Arm the customer-facing reminder on the evening before the alarm."""
+        self._cancel_named("_cancel_reminder")
+        if not bool(self.setting(CONF_REMINDER_ENABLED, DEFAULT_REMINDER_ENABLED)):
+            return
+        if self.next_alarm is None or self.state.status != STATUS_SCHEDULED:
+            return
+        alarm = dt_util.as_local(self.next_alarm)
+        reminder_clock = parse_time(
+            self.setting(CONF_REMINDER_TIME, DEFAULT_REMINDER_TIME)
+        )
+        reminder_at = datetime.combine(
+            alarm.date() - timedelta(days=1),
+            reminder_clock,
+            tzinfo=alarm.tzinfo,
+        )
+        token = self.next_alarm.isoformat()
+        now = dt_util.now()
+        if self.state.reminder_sent_for == token:
+            return
+        if reminder_at <= now:
+            if alarm.date() - now.date() == timedelta(days=1) and alarm > now:
+                # Enabling the option after its configured clock time must not
+                # silently lose tomorrow's reminder. Mark it before dispatch so
+                # rapid entity refreshes cannot enqueue duplicates.
+                self.state.reminder_sent_for = token
+                self.hass.async_create_task(
+                    self._async_send_next_alarm_reminder(token)
+                )
+            return
+        self._cancel_reminder = async_track_point_in_utc_time(
+            self.hass,
+            self._handle_reminder_due,
+            reminder_at.astimezone(UTC),
+        )
+
+    @callback
+    def _handle_reminder_due(self, _now: datetime) -> None:
+        self._cancel_reminder = None
+        token = self.next_alarm.isoformat() if self.next_alarm else None
+        if token:
+            self.hass.async_create_task(self._async_send_next_alarm_reminder(token))
+
+    @callback
+    def _handle_notification_action(self, event: Event) -> None:
+        """Handle only actions that belong to this clock and exact occurrence."""
+        if not bool(self.setting(CONF_REMINDER_ENABLED, DEFAULT_REMINDER_ENABLED)):
+            return
+        action = str(event.data.get("action") or "")
+        prefix = f"CLOCK_ADVANCED:{self.entry.entry_id}:"
+        if not action.startswith(prefix):
+            return
+        parts = action.split(":", 3)
+        if len(parts) != 4:
+            return
+        command, raw_token = parts[2], parts[3]
+        try:
+            token = int(raw_token)
+        except ValueError:
+            return
+        current = self.next_alarm
+        if current is None or int(current.timestamp()) != token:
+            return
+        if command == "SKIP":
+            self.hass.async_create_task(self._async_reminder_skip(token))
+        elif command == "CHANGE":
+            reply = str(event.data.get("reply_text") or "").strip()
+            self.hass.async_create_task(self._async_reminder_change(token, reply))
+
+    async def _async_reminder_skip(self, token: int) -> None:
+        if self.next_alarm is None or int(self.next_alarm.timestamp()) != token:
+            return
+        skipped = dt_util.as_local(self.next_alarm)
+        await self._async_skip_occurrence()
+        german = (self.hass.config.language or "en").lower().startswith("de")
+        time_text = skipped.strftime("%H:%M")
+        message = (
+            f"Der Wecker um {time_text} wurde ausgelassen."
+            if german
+            else f"The {time_text} alarm was skipped."
+        )
+        await self._async_send_reminder_feedback(message)
+
+    async def _async_reminder_change(self, token: int, reply: str) -> None:
+        if self.next_alarm is None or int(self.next_alarm.timestamp()) != token:
+            return
+        german = (self.hass.config.language or "en").lower().startswith("de")
+        try:
+            new_time = parse_time(reply)
+        except (TypeError, ValueError):
+            await self._async_send_reminder_feedback(
+                "Die Uhrzeit wurde nicht geändert. Bitte HH:MM eingeben."
+                if german
+                else "The time was not changed. Please enter HH:MM."
+            )
+            return
+        original = self.next_alarm
+        replacement = dt_util.as_local(original).replace(
+            hour=new_time.hour,
+            minute=new_time.minute,
+            second=0,
+            microsecond=0,
+        )
+        if replacement <= dt_util.now():
+            await self._async_send_reminder_feedback(
+                "Die Uhrzeit wurde nicht geändert, weil sie bereits vorbei ist."
+                if german
+                else "The time was not changed because it is already in the past."
+            )
+            return
+        self.state.skipped_alarm = original.isoformat()
+        await self.async_set_manual_alarm(replacement)
+        time_text = replacement.strftime("%H:%M")
+        await self._async_send_reminder_feedback(
+            f"Nur dieser Wecker wurde auf {time_text} geändert. Der Wochenplan bleibt unverändert."
+            if german
+            else f"Only this alarm was changed to {time_text}. The weekly schedule is unchanged."
+        )
 
     @callback
     def _handle_condition_refresh(self, _now: datetime) -> None:
@@ -808,20 +997,347 @@ class ClockRuntime:
     def _fire_phase(self, phase: str, **extra: Any) -> None:
         self.state.last_phase = phase
         self.hass.bus.async_fire(EVENT_PHASE, self._event_data(phase=phase, **extra))
+        if phase in NOTIFICATION_EVENTS:
+            self._launch_notification(phase, **extra)
 
-    async def _async_run_phase(self, phase: str, **extra: Any) -> None:
+    def _launch_notification(self, event: str, **extra: Any) -> None:
+        """Schedule a configured user notification without delaying the alarm."""
+        self.hass.async_create_task(self._async_send_notification(event, **extra))
+
+    def _notification_content(
+        self, event: str, extra: dict[str, Any]
+    ) -> tuple[str, str]:
+        """Return a concise localized title and the reason for a notification."""
+        german = (self.hass.config.language or "en").lower().startswith("de")
+        event_labels = {
+            "prepare": ("Voralarm", "Pre-alarm"),
+            "start": ("Wecker gestartet", "Alarm started"),
+            "repeat": ("Wecker weiterhin aktiv", "Alarm still active"),
+            "escalate": ("Wecker eskaliert", "Alarm escalated"),
+            "snooze": ("Schlummern", "Snoozed"),
+            "dismiss": ("Wecker beendet", "Alarm dismissed"),
+            "timeout": ("Sicherheitsende", "Safety timeout"),
+            "skipped": ("Wecker ausgelassen", "Alarm skipped"),
+            "blocked": ("Wecker blockiert", "Alarm blocked"),
+            "error": ("Fehler", "Error"),
+        }
+        reason_labels = {
+            "manual": ("manuell beendet", "dismissed manually"),
+            "confirmation": (
+                "durch die Aufstehbestätigung beendet",
+                "dismissed by wake confirmation",
+            ),
+            "vacation": ("Urlaubsmodus ist aktiv", "vacation mode is active"),
+            "non_workday": ("heute ist kein Arbeitstag", "today is not a workday"),
+            "allow_condition": (
+                "die Freigabebedingung ist nicht erfüllt",
+                "the allow condition did not pass",
+            ),
+            "block_condition": (
+                "die Sperrbedingung ist erfüllt",
+                "the blocking condition matched",
+            ),
+            "start_conditions": (
+                "mindestens eine Startbedingung ist nicht erfüllt",
+                "at least one start condition did not pass",
+            ),
+            "skip_next": (
+                "der nächste Termin wurde ausgelassen",
+                "the next occurrence was skipped",
+            ),
+            "timeout": (
+                "das eingestellte Sicherheitsende wurde erreicht",
+                "the configured safety timeout was reached",
+            ),
+            "disabled": ("der Wecker wurde deaktiviert", "the alarm clock was disabled"),
+        }
+        label = event_labels.get(event, (event, event))[0 if german else 1]
+        reason = str(extra.get("reason") or self.state.last_reason or "")
+        reason_text = reason_labels.get(reason, (reason, reason))[0 if german else 1]
+        if event == PHASE_PREPARE:
+            minutes = int(self.setting(CONF_PRE_ALARM_MINUTES, DEFAULT_PRE_ALARM_MINUTES))
+            message = (
+                f"Die Vorbereitung beginnt {minutes} Minuten vor dem Wecker."
+                if german
+                else f"Preparation starts {minutes} minutes before the alarm."
+            )
+        elif event == PHASE_START:
+            from_snooze = extra.get("trigger_kind") == "snooze"
+            message = (
+                "Die Schlummerzeit ist vorbei; der Wecker startet erneut."
+                if german and from_snooze
+                else "Der geplante Wecktermin ist erreicht."
+                if german
+                else "The snooze period ended; the alarm starts again."
+                if from_snooze
+                else "The scheduled alarm time has been reached."
+            )
+        elif event == PHASE_REPEAT:
+            message = (
+                f"Der Wecker ist noch aktiv (Wiederholung {self.state.repeat_count})."
+                if german
+                else f"The alarm is still active (repeat {self.state.repeat_count})."
+            )
+        elif event == PHASE_ESCALATE:
+            message = (
+                "Die eingestellte Eskalationsgrenze wurde erreicht: "
+                f"{self.state.repeat_count} Wiederholungen, "
+                f"{self.state.snooze_count}× Schlummern."
+                if german
+                else "The configured escalation threshold was reached: "
+                f"{self.state.repeat_count} repeats, "
+                f"{self.state.snooze_count} snoozes."
+            )
+        elif event == PHASE_SNOOZE:
+            until = self._parse_datetime(self.state.snooze_until)
+            moment = dt_util.as_local(until).strftime("%H:%M") if until else "–"
+            message = (
+                f"Schlummern {self.state.snooze_count} von "
+                f"{self.setting(CONF_MAX_SNOOZES, DEFAULT_MAX_SNOOZES)} "
+                f"bis {moment}."
+                if german
+                else f"Snooze {self.state.snooze_count} of "
+                f"{self.setting(CONF_MAX_SNOOZES, DEFAULT_MAX_SNOOZES)} "
+                f"until {moment}."
+            )
+        elif event in {PHASE_DISMISS, PHASE_TIMEOUT, PHASE_SKIPPED, "blocked"}:
+            message = (
+                f"Grund: {reason_text or label}."
+                if german
+                else f"Reason: {reason_text or label}."
+            )
+        elif event == PHASE_ERROR:
+            failed = extra.get("failed_phase") or "unknown"
+            message = (
+                f"Die Aktion „{failed}“ ist fehlgeschlagen. Details stehen im "
+                "Home-Assistant-Protokoll."
+                if german
+                else f'The "{failed}" action failed. Details are available in the '
+                "Home Assistant log."
+            )
+        else:
+            message = label
+        return f"{self.entry.title}: {label}", message
+
+    async def _async_send_notification(self, event: str, **extra: Any) -> None:
+        """Send to selected notify entities or the HA notification inbox."""
+        if not bool(
+            self.setting(CONF_NOTIFICATIONS_ENABLED, DEFAULT_NOTIFICATIONS_ENABLED)
+        ):
+            return
+        selected = self.setting(CONF_NOTIFICATION_EVENTS, DEFAULT_NOTIFICATION_EVENTS)
+        if event not in selected:
+            return
+        title, message = self._notification_content(event, extra)
+        targets = self.config.get(CONF_NOTIFICATION_TARGETS) or []
+        if isinstance(targets, str):
+            targets = [targets]
+        try:
+            if targets:
+                await self.hass.services.async_call(
+                    "notify",
+                    "send_message",
+                    {"title": title, "message": message},
+                    target={"entity_id": list(targets)},
+                    blocking=False,
+                )
+            else:
+                await self.hass.services.async_call(
+                    "persistent_notification",
+                    "create",
+                    {
+                        "title": title,
+                        "message": message,
+                        "notification_id": (
+                            f"clock_advanced_{self.entry.entry_id}_{event}"
+                        ),
+                    },
+                    blocking=False,
+                )
+        except Exception:
+            _LOGGER.exception("Clock Advanced notification %s failed", event)
+
+    def _dashboard_path(self) -> str:
+        path = str(self.config.get(CONF_REMINDER_DASHBOARD_PATH) or "").strip()
+        return path if path.startswith("/") else "/config/integrations/integration/clock_advanced"
+
+    async def _async_send_next_alarm_reminder(self, token: str) -> None:
+        """Send one actionable reminder for the exact upcoming occurrence."""
+        if self.next_alarm is None or self.next_alarm.isoformat() != token:
+            return
+        alarm = dt_util.as_local(self.next_alarm)
+        german = (self.hass.config.language or "en").lower().startswith("de")
+        title = (
+            f"{self.entry.title}: nächster Wecker"
+            if german
+            else f"{self.entry.title}: next alarm"
+        )
+        message = (
+            f"Der nächste Wecker ist morgen, {alarm:%d.%m.}, um {alarm:%H:%M} Uhr."
+            if german
+            else f"The next alarm is tomorrow, {alarm:%d/%m}, at {alarm:%H:%M}."
+        )
+        reason = self._guard_block_reason()
+        if reason:
+            reason_text = self._notification_content("blocked", {"reason": reason})[1]
+            message = f"{message}\n\n{reason_text}"
+        timestamp = int(self.next_alarm.timestamp())
+        path = self._dashboard_path()
+        actions = [
+            {
+                "action": f"CLOCK_ADVANCED:{self.entry.entry_id}:SKIP:{timestamp}",
+                "title": "Auslassen" if german else "Skip",
+                "destructive": True,
+            },
+            {
+                "action": f"CLOCK_ADVANCED:{self.entry.entry_id}:CHANGE:{timestamp}",
+                "title": "Zeit ändern" if german else "Change time",
+                "behavior": "textInput",
+                "textInputButtonTitle": "Ändern" if german else "Change",
+                "textInputPlaceholder": "HH:MM",
+            },
+            {
+                "action": "URI",
+                "title": "Clock öffnen" if german else "Open Clock",
+                "uri": path,
+            },
+        ]
+        await self._async_deliver_reminder(title, message, path, actions)
+        self.state.reminder_sent_for = token
+        self._updated()
+
+    async def _async_send_reminder_feedback(self, message: str) -> None:
+        german = (self.hass.config.language or "en").lower().startswith("de")
+        title = (
+            f"{self.entry.title}: Wecker aktualisiert"
+            if german
+            else f"{self.entry.title}: alarm updated"
+        )
+        await self._async_deliver_reminder(
+            title,
+            message,
+            self._dashboard_path(),
+            [],
+        )
+
+    async def _async_deliver_reminder(
+        self,
+        title: str,
+        message: str,
+        path: str,
+        actions: list[dict[str, Any]],
+    ) -> None:
+        targets = self.config.get(CONF_NOTIFICATION_TARGETS) or []
+        if isinstance(targets, str):
+            targets = [targets]
+        try:
+            if targets:
+                await self._async_deliver_to_notify_targets(
+                    [str(target) for target in targets],
+                    title,
+                    message,
+                    path,
+                    actions,
+                )
+            else:
+                await self.hass.services.async_call(
+                    "persistent_notification",
+                    "create",
+                    {
+                        "title": title,
+                        "message": f"{message}\n\n[Clock öffnen]({path})",
+                        "notification_id": (
+                            f"clock_advanced_{self.entry.entry_id}_next_alarm"
+                        ),
+                    },
+                    blocking=False,
+                )
+        except Exception:
+            _LOGGER.exception("Clock Advanced next-alarm reminder failed")
+
+    def _mobile_app_notify_service(self, entity_id: str) -> str | None:
+        """Resolve a modern notify entity to its interactive mobile service."""
+        entry = er.async_get(self.hass).async_get(entity_id)
+        if entry is None or entry.platform != "mobile_app":
+            return None
+        names: list[str] = []
+        if entry.device_id:
+            device = dr.async_get(self.hass).async_get(entry.device_id)
+            if device is not None:
+                names.extend(name for name in (device.name, device.name_by_user) if name)
+        state = self.hass.states.get(entity_id)
+        if state is not None and state.attributes.get("friendly_name"):
+            names.append(str(state.attributes["friendly_name"]))
+        names.append(entity_id.split(".", 1)[-1])
+        for name in dict.fromkeys(names):
+            service = f"mobile_app_{slugify(name)}"
+            if self.hass.services.has_service("notify", service):
+                return service
+        return None
+
+    async def _async_deliver_to_notify_targets(
+        self,
+        targets: list[str],
+        title: str,
+        message: str,
+        path: str,
+        actions: list[dict[str, Any]],
+    ) -> None:
+        """Deliver interactive mobile reminders with a safe entity fallback."""
+        extended_data = {
+            "url": path,
+            "clickAction": path,
+            "tag": f"clock_advanced_{self.entry.entry_id}_next_alarm",
+            "actions": actions,
+        }
+        simple_targets: list[str] = []
+        for entity_id in targets:
+            service = self._mobile_app_notify_service(entity_id)
+            if service is None:
+                simple_targets.append(entity_id)
+                continue
+            try:
+                await self.hass.services.async_call(
+                    "notify",
+                    service,
+                    {"title": title, "message": message, "data": extended_data},
+                    blocking=True,
+                )
+            except Exception:
+                _LOGGER.warning(
+                    "Interactive reminder delivery through notify.%s failed; "
+                    "falling back to notify entity %s",
+                    service,
+                    entity_id,
+                    exc_info=True,
+                )
+                simple_targets.append(entity_id)
+        if simple_targets:
+            # Home Assistant's notify.send_message entity service accepts title
+            # and message only. Passing mobile-app data rejects the whole call.
+            await self.hass.services.async_call(
+                "notify",
+                "send_message",
+                {"title": title, "message": f"{message}\n\n{path}"},
+                target={"entity_id": simple_targets},
+                blocking=True,
+            )
+
+    async def _async_run_phase(
+        self, phase: str, *, context: Context | None = None, **extra: Any
+    ) -> None:
         script = self._scripts.get(phase)
         if script is None or not script.sequence:
             return
         try:
-            await script.async_run({"clock_advanced": self._event_data(phase=phase, **extra)})
+            await script.async_run(
+                {"clock_advanced": self._event_data(phase=phase, **extra)},
+                context=context or Context(),
+            )
         except Exception as exc:  # Home Assistant logs the full script trace.
             _LOGGER.exception("Clock Advanced action phase %s failed", phase)
             self.state.last_error = f"{phase}: {type(exc).__name__}: {exc}"
-            self.hass.bus.async_fire(
-                EVENT_PHASE,
-                self._event_data(phase=PHASE_ERROR, failed_phase=phase),
-            )
+            self._fire_phase(PHASE_ERROR, failed_phase=phase)
             self._updated()
 
     def _event_data(self, **extra: Any) -> dict[str, Any]:
@@ -850,6 +1366,7 @@ class ClockRuntime:
     def _cancel_schedule_timers(self) -> None:
         self._cancel_named("_cancel_alarm")
         self._cancel_named("_cancel_pre_alarm")
+        self._cancel_named("_cancel_reminder")
 
     def _cancel_timers(self) -> None:
         for attribute in (
@@ -858,5 +1375,6 @@ class ClockRuntime:
             "_cancel_repeat",
             "_cancel_timeout",
             "_cancel_status_reset",
+            "_cancel_reminder",
         ):
             self._cancel_named(attribute)

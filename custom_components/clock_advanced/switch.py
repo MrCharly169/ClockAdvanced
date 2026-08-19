@@ -34,6 +34,13 @@ async def async_setup_entry(
                 runtime.async_set_holiday_mode,
                 EntityCategory.CONFIG,
             ),
+            ClockStateSwitch(
+                runtime,
+                "vacation_mode",
+                "vacation_mode",
+                runtime.async_set_vacation_mode,
+                EntityCategory.CONFIG,
+            ),
         ]
     )
 

@@ -17,18 +17,24 @@ The lab uses Home Assistant storage mode, so **Edit dashboard** and the graphica
 powershell -ExecutionPolicy Bypass -File .\scripts\dev.ps1 seed
 ```
 
-Its **Clock Lab** view renders the native Badge, a weekly Advanced card, a Schedule-helper Easy card, and native helper controls. The **Card modes** view contains only Compact, Easy, and Advanced. Run the non-destructive live checks with:
+Its **Clock Lab** view renders the native Badge, a weekly Advanced card, a Schedule-entity Easy card, and native controls. The **Card modes** view contains only Compact, Easy, and Advanced. **Render stability** places Card and Badge together in a deliberately tall, scrollable Sections view for `scrollTop`, focus, countdown and DOM-identity checks. Run the non-destructive live checks with:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\dev.ps1 smoke
 ```
 
-The smoke test validates the full HA configuration, the public Card contract, every referenced control entity, the served Card and Badge module, local brand delivery, vacation handling, native state/NOT/numeric conditions, and the enabled switch. It restores every helper it changes. Alarm start, repeat/escalation, snooze, dismiss, confirmation, and skip remain deliberate lifecycle tests because they wait on real scheduler events. For Schedule-helper lifecycle testing, use a one-minute block and verify that only the real `off` → `on` edge starts an alarm.
+The smoke test validates the full HA configuration, the public Card contract, every referenced control entity, the served Card and Badge module, local brand delivery, vacation handling, native state/NOT/numeric conditions, and the enabled switch. It restores every lab entity it changes. Alarm start, repeat/escalation, snooze, dismiss, confirmation, and skip remain deliberate lifecycle tests because they wait on real scheduler events. For Schedule-entity lifecycle testing, use a one-minute block and verify that only the real `off` → `on` edge starts an alarm.
 
-The repository provides the destructive-to-lab-only lifecycle check below. It temporarily activates the editable Schedule helper, verifies `ringing`, dismisses the alarm, and restores the original schedule and guard states:
+The repository provides the destructive-to-lab-only lifecycle check below. It temporarily activates the editable Schedule entity, verifies `ringing` and `snoozed`, dismisses the alarm, and restores the original schedule and guard states:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\dev.ps1 schedule-test
+```
+
+To verify the shared finish path, run the terminal-action regression directly. It temporarily installs harmless Dismiss and Cleanup probe actions, tests both the Dismiss button and wake-confirmation sensor, and restores the original integration options afterward:
+
+```powershell
+node .\scripts\test_terminal_actions.mjs
 ```
 
 For frontend changes, hard-refresh after loading `/clock_advanced/clock-advanced-card.js`. Python, manifest and translation changes require an integration reload or Home Assistant restart.

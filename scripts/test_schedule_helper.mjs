@@ -85,9 +85,11 @@ try {
   });
   await waitFor("schedule.clock_advanced_lab", "on");
   await waitFor("sensor.schedule_helper_lab_status", "ringing");
+  await service("button", "press", "button.schedule_helper_lab_snooze");
+  await waitFor("sensor.schedule_helper_lab_status", "snoozed");
   await service("button", "press", "button.schedule_helper_lab_dismiss_alarm");
   await waitFor("sensor.schedule_helper_lab_status", "dismissed");
-  console.log("Clock Advanced native Schedule helper lifecycle: PASS");
+  console.log("Clock Advanced native Schedule entity ringing/snoozed lifecycle: PASS");
 } finally {
   await callWS({
     type: "schedule/update", schedule_id: schedule.id, name: schedule.name,
