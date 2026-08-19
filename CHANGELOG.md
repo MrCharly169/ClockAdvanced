@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Adopted the shared MeyersHaff Home Assistant ecosystem policy v1 and its
+  repository guard, so HA-wide integration contracts remain documented and
+  testable in this project.
+
 ## 2026.8.2b0 - 2026-08-19
 
 - Switched recommended dashboard badges to Home Assistant's native Entity Badge.
