@@ -21,7 +21,7 @@
 
 **A complete, UI-configurable alarm clock for Home Assistant.** Clock Advanced brings the schedule, conditions, actions, snooze behavior, escalation and safe finish of one alarm clock into one integration. It also includes a responsive dashboard Card and a compact Badge.
 
-> **Release channel:** `2026.8.1b8` is the current published beta/prerelease. The latest stable release is `2026.8.0`. Beta releases are intended for testing current features; choose the stable release when you prefer the established baseline.
+> **Release channel:** `2026.8.1b9` is the current published beta/prerelease. The latest stable release is `2026.8.0`. Beta releases are intended for testing current features; choose the stable release when you prefer the established baseline.
 
 ## More than an alarm time
 

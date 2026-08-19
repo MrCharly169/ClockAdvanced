@@ -31,6 +31,12 @@ The repository provides the destructive-to-lab-only lifecycle check below. It te
 powershell -ExecutionPolicy Bypass -File .\scripts\dev.ps1 schedule-test
 ```
 
+To verify the shared finish path, run the terminal-action regression directly. It temporarily installs harmless Dismiss and Cleanup probe actions, tests both the Dismiss button and wake-confirmation sensor, and restores the original integration options afterward:
+
+```powershell
+node .\scripts\test_terminal_actions.mjs
+```
+
 For frontend changes, hard-refresh after loading `/clock_advanced/clock-advanced-card.js`. Python, manifest and translation changes require an integration reload or Home Assistant restart.
 
 Run from the repository root:

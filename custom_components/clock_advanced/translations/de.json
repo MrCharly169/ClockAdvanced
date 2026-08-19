@@ -120,14 +120,14 @@
       },
       "reminder": {
         "title": "Erinnerung am Vorabend",
-        "description": "Schritt 7 von 10 · Informiert am Vorabend über den nächsten Wecker. Auf Smartphone-Empfängern kann der Kunde den exakten Termin auslassen, einmalig per HH:MM ändern oder direkt die Clock-Seite öffnen.",
+        "description": "Schritt 7 von 10 · Informiert am Vorabend über den nächsten Wecker. Dieser eigene Schalter muss aktiviert sein; die Empfängerauswahl im nächsten Schritt aktiviert die Erinnerung nicht automatisch. Auf Smartphones lässt sich der Termin auslassen, einmalig per HH:MM ändern oder direkt öffnen.",
         "data": {
           "next_alarm_reminder_enabled": "Vorabend-Erinnerung aktivieren",
           "next_alarm_reminder_time": "Uhrzeit der Erinnerung",
           "dashboard_path": "Pfad zur Clock Card (optional)"
         },
         "data_description": {
-          "next_alarm_reminder_enabled": "Sendet genau eine Erinnerung für den nächsten Termin.",
+          "next_alarm_reminder_enabled": "Muss eingeschaltet sein, damit die Vorabend-Erinnerung geplant wird. Die allgemeinen Alarmmeldungen sind davon unabhängig.",
           "next_alarm_reminder_time": "Uhrzeit am Kalendertag vor dem Wecker, empfohlen 19:00 Uhr.",
           "dashboard_path": "Zum Beispiel /lovelace-bedroom/alarm. Leer öffnet die Clock-Advanced-Integration."
         }

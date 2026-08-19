@@ -121,14 +121,14 @@
       },
       "reminder": {
         "title": "Reminder on the evening before",
-        "description": "Step 7 of 10 · Announces the exact next alarm. Phone recipients can safely skip that occurrence, change it once with HH:MM, or open the Clock page.",
+        "description": "Step 7 of 10 · Announces the exact next alarm. This separate switch must be enabled; selecting recipients in the next step does not enable the reminder automatically. Phone recipients can skip that occurrence, change it once with HH:MM, or open the Clock page.",
         "data": {
           "next_alarm_reminder_enabled": "Enable evening reminder",
           "next_alarm_reminder_time": "Reminder time",
           "dashboard_path": "Path to the Clock Card (optional)"
         },
         "data_description": {
-          "next_alarm_reminder_enabled": "Sends exactly one reminder for the next occurrence.",
+          "next_alarm_reminder_enabled": "Must be enabled to schedule the evening reminder. General alarm notifications are independent.",
           "next_alarm_reminder_time": "Time on the calendar day before the alarm; 19:00 is recommended.",
           "dashboard_path": "For example /lovelace-bedroom/alarm. Empty opens the Clock Advanced integration."
         }

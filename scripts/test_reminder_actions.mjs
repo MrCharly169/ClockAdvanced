@@ -117,7 +117,7 @@ const originalSwitches = Object.fromEntries(
 );
 const initialStep = await reminderStep(entryId);
 const originalReminder = Object.fromEntries(initialStep.data_schema.flatMap((field) => {
-  const value = field.suggested_value ?? field.default;
+  const value = field.description?.suggested_value ?? field.suggested_value ?? field.default;
   return value === undefined ? [] : [[field.name, value]];
 }));
 

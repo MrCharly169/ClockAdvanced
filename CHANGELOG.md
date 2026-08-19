@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 2026.8.1b9 - 2026-08-19
+
+- Made Dismiss/Timeout and the shared Cleanup sequence one awaited terminal path so Card, mobile button, wake-confirmation sensor, blockers, and safety timeout cannot leave completion actions detached.
+- Preserved the terminal reason after schedule recalculation and supplied Home Assistant script contexts for reliable action execution without missing-context warnings.
+- Added a real Home Assistant regression that temporarily installs harmless action probes and verifies both manual Dismiss and wake confirmation run Dismiss followed by Cleanup.
+- Corrected the HAUS1-ET1 migration example to end the refactored NightTime routine through its helper, restoring daytime automation only after Dismiss instead of calling a trigger-dependent automation directly.
+- Fixed evening reminders for modern Notify entities: mobile-app targets now use their interactive `notify.mobile_app_*` service, while every other Notify entity receives a standards-compliant title/message fallback instead of a rejected extended-data payload.
+- Clarified in setup and options that the evening reminder has its own enable switch and is not enabled merely by selecting notification recipients.
+- Applied Home Assistant's static Script schema before asynchronous action validation so nested template conditions from the native action selector become real Template objects instead of failing at alarm start.
+
 ## 2026.8.1b8 - 2026-08-19
 
 - Made the Advanced Card time editor follow the selected day's effective normal, Holiday weekday, or Holiday weekend/public-holiday time as modes and settings change.

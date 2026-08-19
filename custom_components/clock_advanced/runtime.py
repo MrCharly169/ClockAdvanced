@@ -10,8 +10,19 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_STATE_CHANGED
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
-from homeassistant.helpers import condition
+from homeassistant.core import (
+    Context,
+    Event,
+    EventStateChangedData,
+    HomeAssistant,
+    callback,
+)
+from homeassistant.helpers import (
+    condition,
+    config_validation as cv,
+    device_registry as dr,
+    entity_registry as er,
+)
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
     async_track_point_in_utc_time,
@@ -20,7 +31,7 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.helpers.script import Script, async_validate_actions_config
 from homeassistant.helpers.storage import Store
-from homeassistant.util import dt as dt_util
+from homeassistant.util import dt as dt_util, slugify
 
 from .const import (
     ACTION_PHASES,
@@ -295,7 +306,10 @@ class ClockRuntime:
     async def _async_build_scripts(self) -> None:
         for phase in ACTION_PHASES:
             sequence = self.config.get(action_key(phase)) or []
-            validated = await async_validate_actions_config(self.hass, list(sequence))
+            static_validated = cv.SCRIPT_SCHEMA(list(sequence))
+            validated = await async_validate_actions_config(
+                self.hass, static_validated
+            )
             self._scripts[phase] = Script(
                 self.hass,
                 validated,
@@ -592,8 +606,7 @@ class ClockRuntime:
         self._updated()
 
     async def async_dismiss(self, reason: str = "manual", *, timed_out: bool = False) -> None:
-        was_active = self.state.status in ACTIVE_STATUSES
-        if not was_active:
+        if self.state.status not in ACTIVE_STATUSES:
             return
         self._cancel_timers()
         self.state.status = STATUS_TIMEOUT if timed_out else STATUS_DISMISSED
@@ -603,19 +616,30 @@ class ClockRuntime:
         self.state.occurrence_alarm = None
         self.next_alarm = None
         self.pre_alarm_at = None
-        if was_active:
-            phase = PHASE_TIMEOUT if timed_out else PHASE_DISMISS
-            self.hass.async_create_task(self._async_terminal_actions(phase, reason))
+        phase = PHASE_TIMEOUT if timed_out else PHASE_DISMISS
+        # Publish the terminal state immediately, but keep the service call alive
+        # until Dismiss/Timeout and the shared Cleanup sequence have both finished.
+        # This makes button, mobile Card, confirmation sensor, and blocker exits use
+        # one guaranteed completion path instead of a detachable background task.
+        self._updated()
+        await self._async_terminal_actions(phase, reason)
         await self.async_refresh_schedule(clear_manual=True)
         self.state.status = STATUS_TIMEOUT if timed_out else STATUS_DISMISSED
+        # Schedule calculation may clear the reason when a following alarm exists.
+        # Keep the completed session's reason visible while its terminal status is
+        # shown so users and diagnostics can tell whether Card or confirmation won.
+        self.state.last_reason = reason
         self._schedule_status_reset()
         self._updated()
 
     async def _async_terminal_actions(self, phase: str, reason: str) -> None:
+        action_context = Context()
         self._fire_phase(phase, reason=reason)
-        await self._async_run_phase(phase, reason=reason)
+        await self._async_run_phase(phase, context=action_context, reason=reason)
         self._fire_phase(PHASE_CLEANUP, reason=reason)
-        await self._async_run_phase(PHASE_CLEANUP, reason=reason)
+        await self._async_run_phase(
+            PHASE_CLEANUP, context=action_context, reason=reason
+        )
         self._updated()
 
     @callback
@@ -1208,21 +1232,12 @@ class ClockRuntime:
             targets = [targets]
         try:
             if targets:
-                await self.hass.services.async_call(
-                    "notify",
-                    "send_message",
-                    {
-                        "title": title,
-                        "message": message,
-                        "data": {
-                            "url": path,
-                            "clickAction": path,
-                            "tag": f"clock_advanced_{self.entry.entry_id}_next_alarm",
-                            "actions": actions,
-                        },
-                    },
-                    target={"entity_id": list(targets)},
-                    blocking=False,
+                await self._async_deliver_to_notify_targets(
+                    [str(target) for target in targets],
+                    title,
+                    message,
+                    path,
+                    actions,
                 )
             else:
                 await self.hass.services.async_call(
@@ -1240,12 +1255,85 @@ class ClockRuntime:
         except Exception:
             _LOGGER.exception("Clock Advanced next-alarm reminder failed")
 
-    async def _async_run_phase(self, phase: str, **extra: Any) -> None:
+    def _mobile_app_notify_service(self, entity_id: str) -> str | None:
+        """Resolve a modern notify entity to its interactive mobile service."""
+        entry = er.async_get(self.hass).async_get(entity_id)
+        if entry is None or entry.platform != "mobile_app":
+            return None
+        names: list[str] = []
+        if entry.device_id:
+            device = dr.async_get(self.hass).async_get(entry.device_id)
+            if device is not None:
+                names.extend(name for name in (device.name, device.name_by_user) if name)
+        state = self.hass.states.get(entity_id)
+        if state is not None and state.attributes.get("friendly_name"):
+            names.append(str(state.attributes["friendly_name"]))
+        names.append(entity_id.split(".", 1)[-1])
+        for name in dict.fromkeys(names):
+            service = f"mobile_app_{slugify(name)}"
+            if self.hass.services.has_service("notify", service):
+                return service
+        return None
+
+    async def _async_deliver_to_notify_targets(
+        self,
+        targets: list[str],
+        title: str,
+        message: str,
+        path: str,
+        actions: list[dict[str, Any]],
+    ) -> None:
+        """Deliver interactive mobile reminders with a safe entity fallback."""
+        extended_data = {
+            "url": path,
+            "clickAction": path,
+            "tag": f"clock_advanced_{self.entry.entry_id}_next_alarm",
+            "actions": actions,
+        }
+        simple_targets: list[str] = []
+        for entity_id in targets:
+            service = self._mobile_app_notify_service(entity_id)
+            if service is None:
+                simple_targets.append(entity_id)
+                continue
+            try:
+                await self.hass.services.async_call(
+                    "notify",
+                    service,
+                    {"title": title, "message": message, "data": extended_data},
+                    blocking=True,
+                )
+            except Exception:
+                _LOGGER.warning(
+                    "Interactive reminder delivery through notify.%s failed; "
+                    "falling back to notify entity %s",
+                    service,
+                    entity_id,
+                    exc_info=True,
+                )
+                simple_targets.append(entity_id)
+        if simple_targets:
+            # Home Assistant's notify.send_message entity service accepts title
+            # and message only. Passing mobile-app data rejects the whole call.
+            await self.hass.services.async_call(
+                "notify",
+                "send_message",
+                {"title": title, "message": f"{message}\n\n{path}"},
+                target={"entity_id": simple_targets},
+                blocking=True,
+            )
+
+    async def _async_run_phase(
+        self, phase: str, *, context: Context | None = None, **extra: Any
+    ) -> None:
         script = self._scripts.get(phase)
         if script is None or not script.sequence:
             return
         try:
-            await script.async_run({"clock_advanced": self._event_data(phase=phase, **extra)})
+            await script.async_run(
+                {"clock_advanced": self._event_data(phase=phase, **extra)},
+                context=context or Context(),
+            )
         except Exception as exc:  # Home Assistant logs the full script trace.
             _LOGGER.exception("Clock Advanced action phase %s failed", phase)
             self.state.last_error = f"{phase}: {type(exc).__name__}: {exc}"

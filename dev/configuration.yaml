@@ -27,6 +27,12 @@ input_boolean:
   quiet_mode:
     name: Quiet mode
     initial: false
+  dismiss_probe:
+    name: Dismiss action probe
+    initial: false
+  cleanup_probe:
+    name: Cleanup action probe
+    initial: false
 
 input_number:
   home_count:

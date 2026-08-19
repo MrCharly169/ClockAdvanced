@@ -167,8 +167,39 @@ class PackageTests(unittest.TestCase):
         self.assertIn('"behavior": "textInput"', runtime)
         self.assertIn('"action": "URI"', runtime)
         self.assertIn("int(current.timestamp()) != token", runtime)
+        self.assertIn("_mobile_app_notify_service", runtime)
+        self.assertIn('service = f"mobile_app_{slugify(name)}"', runtime)
+        self.assertIn("falling back to notify entity", runtime)
+        self.assertIn('"send_message"', runtime)
+        self.assertIn("Passing mobile-app data rejects the whole call", runtime)
+        self.assertIn("Empfängerauswahl im nächsten Schritt aktiviert", translations)
         self.assertIn("Ferienzeit verschiebt die Uhrzeit", translations)
         self.assertIn('"holiday_mode": { "name": "Ferienzeit" }', translations)
+
+    def test_dismiss_and_confirmation_await_the_same_cleanup_path(self) -> None:
+        runtime = (COMPONENT / "runtime.py").read_text(encoding="utf-8")
+        dismiss_start = runtime.index("    async def async_dismiss(")
+        dismiss_end = runtime.index("    async def _async_terminal_actions(", dismiss_start)
+        dismiss = runtime[dismiss_start:dismiss_end]
+        state_change_start = runtime.index("    def _handle_state_change(")
+        state_change_end = runtime.index(
+            "    def _handle_pre_alarm_due(", state_change_start
+        )
+        state_change = runtime[state_change_start:state_change_end]
+        terminal_start = runtime.index("    async def _async_terminal_actions(")
+        terminal_end = runtime.index("    @callback", terminal_start)
+        terminal = runtime[terminal_start:terminal_end]
+
+        self.assertIn("await self._async_terminal_actions(phase, reason)", dismiss)
+        self.assertNotIn("async_create_task(self._async_terminal_actions", dismiss)
+        self.assertGreaterEqual(dismiss.count("self.state.last_reason = reason"), 2)
+        self.assertIn('self.async_dismiss("confirmation")', state_change)
+        self.assertIn("context=context or Context()", runtime)
+        self.assertIn("static_validated = cv.SCRIPT_SCHEMA", runtime)
+        self.assertLess(
+            terminal.index("await self._async_run_phase(phase"),
+            terminal.index("PHASE_CLEANUP, context=action_context"),
+        )
 
     def test_card_weekday_editor_and_native_vacation_are_shipped(self) -> None:
         init = (COMPONENT / "__init__.py").read_text(encoding="utf-8")
