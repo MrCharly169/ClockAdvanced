@@ -409,6 +409,7 @@ global.document = {
   badgeEditor.setConfig(badgeStub);
   badgeEditor.hass = hass;
   if (!badgeEditor.shadowRoot.innerHTML.includes("The main symbol always remains the alarm clock")) throw new Error("Badge editor did not explain the stable alarm symbol and state marker");
+  if (!badgeEditor.shadowRoot.innerHTML.includes("native Visibility tab")) throw new Error("Badge editor did not delegate visibility to Home Assistant");
   if (!window.customBadges?.some((item) => item.type === "clock-advanced-badge")) throw new Error("Badge picker registration missing");
   if (!source.includes('{ value: "compact"') || !source.includes('{ value: "easy"') || !source.includes('{ value: "advanced"')) throw new Error("Compact, Easy, and Advanced modes are not available");
   console.log("Clock Advanced Card runtime contract valid");

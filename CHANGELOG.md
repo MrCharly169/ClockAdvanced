@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 2026.8.1b10 - 2026-08-19
+
+- Clarified in the Badge editor that visibility and lifecycle-state conditions belong exclusively in Home Assistant's native Visibility tab.
+- Kept the native enum status contract and the shared 36 px Badge geometry as the single source for dashboard visibility choices and presentation.
+
 ## 2026.8.1b9 - 2026-08-19
 
 - Made Dismiss/Timeout and the shared Cleanup sequence one awaited terminal path so Card, mobile button, wake-confirmation sensor, blockers, and safety timeout cannot leave completion actions detached.
