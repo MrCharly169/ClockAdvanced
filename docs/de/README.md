@@ -21,7 +21,7 @@
 
 **Ein vollständiger, über die Oberfläche konfigurierbarer Wecker für Home Assistant.** Clock Advanced vereint Zeitplan, Bedingungen, Aktionen, Schlummerverhalten, Eskalation und sicheren Abschluss eines Weckers in einer Integration. Eine responsive Dashboard-Card und ein kompaktes Badge sind enthalten.
 
-> **Release-Kanal:** `2026.8.3b0` ist die aktuell veröffentlichte Beta-/Vorabversion. Der neueste stabile Release ist `2026.8.0`. Beta-Releases dienen zum Testen aktueller Funktionen; der stabile Release ist die passendere Wahl für die etablierte Basis.
+> **Release-Kanal:** `2026.8.3b2` ist die aktuelle Beta-/Vorabversion. Der neueste stabile Release ist `2026.8.0`. Beta-Releases dienen zum Testen aktueller Funktionen; der stabile Release ist die passendere Wahl für die etablierte Basis.
 
 ## Mehr als eine Weckzeit
 
@@ -185,7 +185,7 @@ Ferienzeit verändert, *wann* ein aktivierter wöchentlicher Termin stattfindet.
 
 ## Clock-Advanced-Badge
 
-Das gebündelte Custom Badge verwendet die kleine native `ha-badge`-Geometrie von Home Assistant. Das Weckersymbol bleibt immer sichtbar; eine kleinere Markierung und eine semantische Theme-Farbe zeigen den aktuellen Lebenszykluszustand. Tooltip und Barrierefreiheitsname enthalten Zustand und passenden Zeitkontext. Maus, Enter oder Leertaste führen die im nativen Tab Interaktionen konfigurierte Tipp-Aktion aus; Mehr Info ist Standard.
+Das gebündelte Custom Badge verwendet die kleine native `ha-badge`-Geometrie von Home Assistant. Bei einem zukünftigen Wecker zeigt es die Uhrzeit nur für heute, danach „Morgen“, einen Wochentag oder ein Datum. Solange dieser kompakte Termintext sichtbar ist, wird der zusätzliche Zustandsmarker ausgeblendet, damit der Text frei bleibt. Aktive Lebenszykluszustände verwenden Marker und semantische Theme-Farbe. Tooltip und Barrierefreiheitsname behalten den vollständigen Termin. Maus, Enter oder Leertaste führen die im nativen Tab Interaktionen konfigurierte Tipp-Aktion aus; Mehr Info ist Standard.
 
 ## Weck-Lebenszyklus
 
