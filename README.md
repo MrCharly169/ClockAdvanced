@@ -185,7 +185,7 @@ Holiday Time changes *when* an enabled weekly occurrence happens. Vacation decid
 
 ## Clock Advanced Badge
 
-The bundled Custom Badge uses Home Assistant's small native `ha-badge` geometry. The alarm-clock symbol always remains visible; a smaller marker and semantic theme color communicate the current lifecycle state. Its tooltip and accessible name include the state and relevant alarm timing. Mouse, Enter or Space executes the tap action configured in Home Assistant's native Interactions tab; More info is the default.
+The bundled Custom Badge uses Home Assistant's small native `ha-badge` geometry. For a future scheduled alarm it shows the time only when the alarm is today, then tomorrow, a weekday or a date. While this compact schedule label is visible, the secondary lifecycle marker is hidden so the label remains unobstructed. Active lifecycle states use the marker and semantic theme color. Its tooltip and accessible name retain the complete alarm timing. Mouse, Enter or Space executes the tap action configured in Home Assistant's native Interactions tab; More info is the default.
 
 ## Alarm lifecycle
 
