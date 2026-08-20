@@ -117,6 +117,8 @@ global.document = {
   if (stub.entity !== "sensor.clock_status") throw new Error("Stub did not discover the status entity");
   if (stub.mode !== "easy") throw new Error("Easy is not the default Card mode");
   const instance = new Card();
+  const todayIndex = (new Date().getDay() + 6) % 7;
+  if (instance._selectedDay !== todayIndex) throw new Error("A new Card did not select the current weekday");
   instance.setConfig(stub);
   instance.hass = hass;
   if (instance.getCardSize() !== 5 || instance.getGridOptions().columns !== 12
@@ -242,6 +244,9 @@ global.document = {
     "switch.clock_holiday": { state: "on", attributes: {} },
     "switch.clock_vacation": { state: "off", attributes: {} },
   } };
+  if (!instance.shadowRoot.querySelector(`[data-day="${todayIndex}"]`).classList.contains("selected")) {
+    throw new Error("The current weekday does not have the initial yellow selection marker");
+  }
   const mondayTime = instance.shadowRoot.querySelector('[data-day="0"]').children[1];
   if (mondayTime.textContent !== "06:00" || !instance.shadowRoot.querySelector("[data-schedule]").classList.contains("holiday-active")) {
     throw new Error("Holiday mode did not update the effective weekly overview times");
@@ -324,6 +329,14 @@ global.document = {
     composedPath: () => [tuesdayButton, instance.shadowRoot],
   });
   if (instance._selectedDay !== 1) throw new Error("Delegated weekday selection did not update the editor");
+  if (!tuesdayButton.classList.contains("selected")) throw new Error("The yellow weekday marker did not follow the user selection");
+  const reloadedCard = new Card();
+  reloadedCard.setConfig({ ...stub, mode: "advanced" });
+  reloadedCard.hass = instance._hass;
+  if (reloadedCard._selectedDay !== todayIndex
+    || !reloadedCard.shadowRoot.querySelector(`[data-day="${todayIndex}"]`).classList.contains("selected")) {
+    throw new Error("A reloaded Card did not restore the current weekday selection");
+  }
   instance._selectedDay = 0;
   await instance._saveWeekday("07:35", false);
   const scheduleCall = serviceCalls.at(-1);
