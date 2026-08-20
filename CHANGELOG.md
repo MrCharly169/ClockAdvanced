@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 2026.8.3b2 - 2026-08-20
+
+- Selected the current local weekday when the Advanced Card is first created,
+  while keeping deliberate weekday selections until the Card is reloaded.
+
 ## 2026.8.3b1 - 2026-08-20
 
 - Made the scheduled Badge calendar-aware: it shows the local time only for an
@@ -12,7 +17,6 @@
   collision-free hybrid Badge presentation.
 
 ## 2026.8.3b0 - 2026-08-19
-
 - Restored the Clock Advanced Custom Badge so the clock logo, state marker and
   semantic color can change together.
 - Delegated tap actions through Home Assistant's `hass-action` contract and

@@ -3,6 +3,7 @@ const EDITOR_TAG = "clock-advanced-card-editor";
 const BADGE_TAG = "clock-advanced-badge";
 const BADGE_EDITOR_TAG = "clock-advanced-badge-editor";
 const WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const currentWeekdayIndex = () => (new Date().getDay() + 6) % 7;
 
 const TEXT = {
   en: {
@@ -150,7 +151,7 @@ class ClockAdvancedCard extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
     this._detailsOpen = false;
-    this._selectedDay = 0;
+    this._selectedDay = currentWeekdayIndex();
     this._scheduleDraft = null;
     this._onClick = this._onClick.bind(this);
     this._onInput = this._onInput.bind(this);
@@ -418,7 +419,7 @@ class ClockAdvancedCard extends HTMLElement {
   }
 
   _holidayScopeForDay(index, workdayState) {
-    const todayIndex = (new Date().getDay() + 6) % 7;
+    const todayIndex = currentWeekdayIndex();
     return index >= 5 || (workdayState === "off" && index === todayIndex)
       ? "weekend"
       : "weekday";

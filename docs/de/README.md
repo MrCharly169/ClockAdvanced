@@ -21,7 +21,7 @@
 
 **Ein vollständiger, über die Oberfläche konfigurierbarer Wecker für Home Assistant.** Clock Advanced vereint Zeitplan, Bedingungen, Aktionen, Schlummerverhalten, Eskalation und sicheren Abschluss eines Weckers in einer Integration. Eine responsive Dashboard-Card und ein kompaktes Badge sind enthalten.
 
-> **Release-Kanal:** `2026.8.3b1` ist die aktuelle Beta-/Vorabversion. Der neueste stabile Release ist `2026.8.0`. Beta-Releases dienen zum Testen aktueller Funktionen; der stabile Release ist die passendere Wahl für die etablierte Basis.
+> **Release-Kanal:** `2026.8.3b2` ist die aktuelle Beta-/Vorabversion. Der neueste stabile Release ist `2026.8.0`. Beta-Releases dienen zum Testen aktueller Funktionen; der stabile Release ist die passendere Wahl für die etablierte Basis.
 
 ## Mehr als eine Weckzeit
 
