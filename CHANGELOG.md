@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 2026.8.3b1 - 2026-08-20
+
+- Made the scheduled Badge calendar-aware: it shows the local time only for an
+  alarm today, then tomorrow, the weekday or the date for later alarms.
+- Hid the secondary lifecycle marker while a compact schedule label is shown,
+  preventing the calendar/house marker from covering labels such as `Fr`.
+- Adopted Home Assistant ecosystem policy 1.2 for future planning semantics and
+  collision-free hybrid Badge presentation.
+
 ## 2026.8.3b0 - 2026-08-19
 
 - Restored the Clock Advanced Custom Badge so the clock logo, state marker and

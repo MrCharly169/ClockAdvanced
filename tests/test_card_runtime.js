@@ -112,6 +112,12 @@ global.document = {
   const Badge = registry.get("clock-advanced-badge");
   if (!Badge || !registry.get("clock-advanced-badge-editor")) throw new Error("Badge was not registered");
   const serviceCalls = [];
+  const scheduledAfterDays = (days, hour = 6) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    date.setHours(hour, 0, 0, 0);
+    return date.toISOString();
+  };
   const hass = { states: { "sensor.clock_status": { state: "scheduled", last_updated: "2031-06-20T05:00:00+00:00", attributes: { card_contract: 1, card_type: "custom:clock-advanced-card", controls: {}, schedule: [], name: "Bedroom clock", next_alarm: "2031-06-21T06:00:00+00:00" } } }, language: "en", callService: async (...args) => { serviceCalls.push(args); } };
   const stub = Card.getStubConfig(hass);
   if (stub.entity !== "sensor.clock_status") throw new Error("Stub did not discover the status entity");
@@ -353,10 +359,19 @@ global.document = {
   badge.hass = hass;
   const badgeRoot = badge.shadowRoot.querySelector("ha-badge");
   const badgeMarker = badge.shadowRoot.querySelector("[data-state-icon]");
+  const badgeMarkerContainer = badge.shadowRoot.querySelector(".state-marker");
+  const badgeNextTime = badge.shadowRoot.querySelector("[data-next-time]");
   if (badgeRoot.dataset.mode !== "scheduled"
     || badgeMarker.getAttribute("icon") !== "mdi:calendar-check"
+    || !badgeMarkerContainer.hidden
+    || badgeNextTime.hidden
+    || !badgeNextTime.textContent
     || !badgeRoot.getAttribute("title").includes("Bedroom clock")
     || !badgeRoot.getAttribute("title").includes("Next alarm")) throw new Error("Badge lost its native Clock identity, state marker, or next alarm detail");
+  if (!badge._formatNextRun(scheduledAfterDays(0), "en").short.includes(":")) throw new Error("A Clock alarm today must show its time");
+  if (badge._formatNextRun(scheduledAfterDays(1), "de").short !== "Morgen") throw new Error("A Clock alarm tomorrow must be explicit in German");
+  if (badge._formatNextRun(scheduledAfterDays(3), "de").short.includes(":")) throw new Error("A Clock alarm this week must show a weekday");
+  if (badge._formatNextRun(scheduledAfterDays(10), "de").short.includes(":")) throw new Error("A later Clock alarm must show a date");
   badgeRoot.listeners.get("click")?.(new Event("click"));
   if (badge.dispatchedEvents.at(-1)?.type !== "hass-action"
     || badge.dispatchedEvents.at(-1)?.detail?.action !== "tap"

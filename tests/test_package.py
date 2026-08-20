@@ -72,6 +72,8 @@ class PackageTests(unittest.TestCase):
         self.assertIn("<ha-badge", frontend)
         self.assertIn('class="clock-symbol" icon="mdi:alarm"', frontend)
         self.assertIn('class="state-marker"', frontend)
+        self.assertIn('class="next-time"', frontend)
+        self.assertIn('markerContainer.hidden = Boolean(nextRun.short)', frontend)
         self.assertIn("badge.dataset.mode = mode", frontend)
         self.assertIn("_lastRenderSignature", frontend)
         self.assertIn('new CustomEvent("hass-action"', frontend)

@@ -1086,6 +1086,29 @@ class ClockAdvancedBadge extends HTMLElement {
     return `${day}, ${time}`;
   }
 
+  _formatNextRun(value, lang) {
+    if (!value) return { short: "", full: "" };
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return { short: "", full: "" };
+    const now = new Date();
+    const calendarDay = (candidate) => Date.UTC(candidate.getFullYear(), candidate.getMonth(), candidate.getDate());
+    const daysAway = Math.round((calendarDay(date) - calendarDay(now)) / 86400000);
+    if (daysAway < 0) return { short: "", full: "" };
+    const locale = lang === "de" ? "de-DE" : "en-GB";
+    const full = this._formatMoment(value, lang);
+    let short;
+    if (daysAway === 0) {
+      short = new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
+    } else if (daysAway === 1) {
+      short = TEXT[lang].tomorrow;
+    } else if (daysAway <= 6) {
+      short = new Intl.DateTimeFormat(locale, { weekday: "short" }).format(date).replace(/\.$/, "");
+    } else {
+      short = new Intl.DateTimeFormat(locale, { day: "numeric", month: "numeric" }).format(date);
+    }
+    return { short, full };
+  }
+
   _statusDetails(entity, lang) {
     const t = TEXT[lang];
     const attrs = entity?.attributes || {};
@@ -1112,12 +1135,16 @@ class ClockAdvancedBadge extends HTMLElement {
         ha-badge{--badge-color:var(--primary-color,#03a9f4)}
         .badge-symbol{position:relative;display:grid;place-items:center;width:22px;height:22px;color:var(--badge-color)}
         .clock-symbol{--mdc-icon-size:20px}
+        ha-badge[data-has-next="true"] .clock-symbol{--mdc-icon-size:14px;transform:translateY(-3px)}
+        .next-time{position:absolute;left:50%;bottom:1px;transform:translateX(-50%);font-size:6px;font-weight:850;line-height:1;letter-spacing:-.04em;white-space:nowrap;color:var(--badge-color)}
         .state-marker{position:absolute;right:-4px;bottom:-4px;display:grid;place-items:center;width:12px;height:12px;border-radius:50%;background:var(--ha-card-background,var(--card-background-color,#fff));box-shadow:0 0 0 1px var(--ha-card-border-color,var(--divider-color,#ddd));color:var(--badge-color)}
         .state-marker ha-icon{--mdc-icon-size:9px}
+        .next-time[hidden],.state-marker[hidden]{display:none}
       </style>
       <ha-badge type="button" icon-only data-mode="unavailable">
         <span slot="icon" class="badge-symbol">
           <ha-icon class="clock-symbol" icon="mdi:alarm"></ha-icon>
+          <small class="next-time" data-next-time hidden></small>
           <span class="state-marker"><ha-icon data-state-icon icon="mdi:alert-circle-outline"></ha-icon></span>
         </span>
       </ha-badge>`;
@@ -1139,6 +1166,9 @@ class ClockAdvancedBadge extends HTMLElement {
     const badge = this.shadowRoot.querySelector("ha-badge");
     const mode = entity?.state || "unavailable";
     const marker = this.shadowRoot.querySelector("[data-state-icon]");
+    const markerContainer = this.shadowRoot.querySelector(".state-marker");
+    const nextTime = this.shadowRoot.querySelector("[data-next-time]");
+    const nextRun = mode === "scheduled" ? this._formatNextRun(entity?.attributes?.next_alarm, lang) : { short: "", full: "" };
     const details = entity ? this._statusDetails(entity, lang) : null;
     const tooltip = entity
       ? [
@@ -1150,6 +1180,7 @@ class ClockAdvancedBadge extends HTMLElement {
     if (badge) {
       const color = this._color(mode);
       if (badge.dataset.mode !== mode) badge.dataset.mode = mode;
+      badge.dataset.hasNext = nextRun.short ? "true" : "false";
       if (badge.style.getPropertyValue("--badge-color") !== color) {
         badge.style.setProperty("--badge-color", color);
       }
@@ -1158,6 +1189,11 @@ class ClockAdvancedBadge extends HTMLElement {
     }
     const markerIcon = this._stateIcon(mode);
     if (marker?.getAttribute("icon") !== markerIcon) marker?.setAttribute("icon", markerIcon);
+    if (markerContainer) markerContainer.hidden = Boolean(nextRun.short);
+    if (nextTime) {
+      nextTime.hidden = !nextRun.short;
+      if (nextTime.textContent !== nextRun.short) nextTime.textContent = nextRun.short;
+    }
   }
 
 }
