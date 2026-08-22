@@ -143,6 +143,8 @@ class PackageTests(unittest.TestCase):
             "CONF_NOTIFICATIONS_ENABLED",
             "CONF_NOTIFICATION_TARGETS",
             "CONF_NOTIFICATION_EVENTS",
+            "CONF_NOTIFICATION_BACK_PATH",
+            "CONF_REMINDER_DASHBOARD_PATH",
             "notification_event",
         ):
             self.assertIn(token, config_flow)
@@ -151,6 +153,10 @@ class PackageTests(unittest.TestCase):
         self.assertIn("_notification_content", runtime)
         self.assertIn('self._launch_notification("blocked"', runtime)
         self.assertIn("CONF_NOTIFICATION_TARGETS", diagnostics)
+        for field in ('"url": path', '"clickAction": path', '"action": "URI"', '"uri": path'):
+            self.assertIn(field, runtime)
+        self.assertIn("_dashboard_back_path", runtime)
+        self.assertIn("CONF_NOTIFICATION_BACK_PATH", diagnostics)
 
     def test_actionable_evening_reminder_is_occurrence_safe(self) -> None:
         config_flow = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
@@ -231,8 +237,8 @@ class PackageTests(unittest.TestCase):
         self.assertIn('"holiday_time": self.runtime.schedule.holiday_time.isoformat()', sensor)
         self.assertIn('"holiday_weekend_time": (', sensor)
         self.assertIn("CONF_HOLIDAY_WEEKEND_TIME", runtime)
-        self.assertIn("version=5", init)
-        self.assertIn("VERSION = 5", config_flow)
+        self.assertIn("version=6", init)
+        self.assertIn("VERSION = 6", config_flow)
 
 
 if __name__ == "__main__":

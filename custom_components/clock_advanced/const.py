@@ -48,6 +48,7 @@ CONF_TERMINAL_STATE_MINUTES = "terminal_state_minutes"
 CONF_NOTIFICATIONS_ENABLED = "notifications_enabled"
 CONF_NOTIFICATION_TARGETS = "notification_targets"
 CONF_NOTIFICATION_EVENTS = "notification_events"
+CONF_NOTIFICATION_BACK_PATH = "dashboard_back_path"
 CONF_REMINDER_ENABLED = "next_alarm_reminder_enabled"
 CONF_REMINDER_TIME = "next_alarm_reminder_time"
 CONF_REMINDER_DASHBOARD_PATH = "dashboard_path"
@@ -115,6 +116,7 @@ DEFAULT_NOTIFICATION_EVENTS = (
     "timeout",
     "blocked",
 )
+DEFAULT_NOTIFICATION_BACK_PATH = "/lovelace"
 DEFAULT_REMINDER_ENABLED = False
 DEFAULT_REMINDER_TIME = "19:00:00"
 

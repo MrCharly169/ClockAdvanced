@@ -51,6 +51,7 @@ from .const import (
     CONF_NON_WORKDAY_ENABLED,
     CONF_NON_WORKDAY_TIME,
     CONF_NOTIFICATION_EVENTS,
+    CONF_NOTIFICATION_BACK_PATH,
     CONF_NOTIFICATION_TARGETS,
     CONF_NOTIFICATIONS_ENABLED,
     CONF_REMINDER_DASHBOARD_PATH,
@@ -75,6 +76,7 @@ from .const import (
     DEFAULT_MAX_SNOOZES,
     DEFAULT_NON_WORKDAY_TIME,
     DEFAULT_NOTIFICATION_EVENTS,
+    DEFAULT_NOTIFICATION_BACK_PATH,
     DEFAULT_NOTIFICATIONS_ENABLED,
     DEFAULT_REMINDER_ENABLED,
     DEFAULT_REMINDER_TIME,
@@ -1134,20 +1136,30 @@ class ClockRuntime:
             targets = [targets]
         try:
             if targets:
-                await self.hass.services.async_call(
-                    "notify",
-                    "send_message",
-                    {"title": title, "message": message},
-                    target={"entity_id": list(targets)},
-                    blocking=False,
+                path = self._dashboard_path()
+                await self._async_deliver_to_notify_targets(
+                    [str(target) for target in targets],
+                    title,
+                    message,
+                    path,
+                    [
+                        {
+                            "action": "URI",
+                            "title": "Clock öffnen"
+                            if (self.hass.config.language or "en").lower().startswith("de")
+                            else "Open Clock",
+                            "uri": path,
+                        }
+                    ],
                 )
             else:
+                path = self._dashboard_path()
                 await self.hass.services.async_call(
                     "persistent_notification",
                     "create",
                     {
                         "title": title,
-                        "message": message,
+                        "message": f"{message}\n\n[Open Clock]({path})",
                         "notification_id": (
                             f"clock_advanced_{self.entry.entry_id}_{event}"
                         ),
@@ -1160,6 +1172,10 @@ class ClockRuntime:
     def _dashboard_path(self) -> str:
         path = str(self.config.get(CONF_REMINDER_DASHBOARD_PATH) or "").strip()
         return path if path.startswith("/") else "/config/integrations/integration/clock_advanced"
+
+    def _dashboard_back_path(self) -> str:
+        path = str(self.config.get(CONF_NOTIFICATION_BACK_PATH) or "").strip()
+        return path if path.startswith("/") else DEFAULT_NOTIFICATION_BACK_PATH
 
     async def _async_send_next_alarm_reminder(self, token: str) -> None:
         """Send one actionable reminder for the exact upcoming occurrence."""

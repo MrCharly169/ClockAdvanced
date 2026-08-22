@@ -253,6 +253,8 @@ global.document = {
   if (!instance.shadowRoot.querySelector(`[data-day="${todayIndex}"]`).classList.contains("selected")) {
     throw new Error("The current weekday does not have the initial yellow selection marker");
   }
+  instance._selectedDay = 0;
+  instance._patch();
   const mondayTime = instance.shadowRoot.querySelector('[data-day="0"]').children[1];
   if (mondayTime.textContent !== "06:00" || !instance.shadowRoot.querySelector("[data-schedule]").classList.contains("holiday-active")) {
     throw new Error("Holiday mode did not update the effective weekly overview times");

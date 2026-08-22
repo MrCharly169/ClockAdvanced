@@ -124,13 +124,11 @@
         "description": "Step 7 of 10 · Announces the exact next alarm. This separate switch must be enabled; selecting recipients in the next step does not enable the reminder automatically. Phone recipients can skip that occurrence, change it once with HH:MM, or open the Clock page.",
         "data": {
           "next_alarm_reminder_enabled": "Enable evening reminder",
-          "next_alarm_reminder_time": "Reminder time",
-          "dashboard_path": "Path to the Clock Card (optional)"
+          "next_alarm_reminder_time": "Reminder time"
         },
         "data_description": {
           "next_alarm_reminder_enabled": "Must be enabled to schedule the evening reminder. General alarm notifications are independent.",
-          "next_alarm_reminder_time": "Time on the calendar day before the alarm; 19:00 is recommended.",
-          "dashboard_path": "For example /lovelace-bedroom/alarm. Empty opens the Clock Advanced integration."
+          "next_alarm_reminder_time": "Time on the calendar day before the alarm; 19:00 is recommended."
         }
       },
       "notifications": {
@@ -139,12 +137,16 @@
         "data": {
           "notifications_enabled": "Enable notifications",
           "notification_targets": "Recipients (optional)",
-          "notification_events": "Notify me when"
+          "notification_events": "Notify me when",
+          "dashboard_path": "Notification destination (optional)",
+          "dashboard_back_path": "Return path from the destination Subview"
         },
         "data_description": {
           "notifications_enabled": "Master switch for every alarm notification from this clock.",
           "notification_targets": "Optionally select one or more Notify entities such as a phone. Leave empty for the Home Assistant notification inbox.",
-          "notification_events": "Only selected events send a message. Blocked notifications also name the condition that did not pass."
+          "notification_events": "Only selected events send a message. Blocked notifications also name the condition that did not pass.",
+          "dashboard_path": "For example /lovelace-bedroom/alarm. Every navigable notification uses this installation-specific path.",
+          "dashboard_back_path": "Save this value as back_path on the destination Subview. It is not stored on the Badge or notification route."
         }
       },
       "finish_actions": {
@@ -259,8 +261,7 @@
         "description": "Announces the exact next alarm. Phone recipients get Skip, one-time time change, and a direct link to the Clock Card.",
         "data": {
           "next_alarm_reminder_enabled": "Enable evening reminder",
-          "next_alarm_reminder_time": "Reminder time",
-          "dashboard_path": "Path to the Clock Card (optional)"
+          "next_alarm_reminder_time": "Reminder time"
         }
       },
       "notifications": {
@@ -269,12 +270,16 @@
         "data": {
           "notifications_enabled": "Enable notifications",
           "notification_targets": "Recipients (optional)",
-          "notification_events": "Notify me when"
+          "notification_events": "Notify me when",
+          "dashboard_path": "Notification destination (optional)",
+          "dashboard_back_path": "Return path from the destination Subview"
         },
         "data_description": {
           "notifications_enabled": "Turns every alarm notification from this clock on or off.",
           "notification_targets": "Notify entities such as phones; empty means the Home Assistant notification inbox.",
-          "notification_events": "Select exactly which state changes should send a message."
+          "notification_events": "Select exactly which state changes should send a message.",
+          "dashboard_path": "Installation-specific Clock view opened by notifications.",
+          "dashboard_back_path": "Native back_path saved on that destination Subview."
         }
       },
       "finish_actions": {

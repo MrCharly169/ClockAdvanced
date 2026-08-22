@@ -123,13 +123,11 @@
         "description": "Schritt 7 von 10 · Informiert am Vorabend über den nächsten Wecker. Dieser eigene Schalter muss aktiviert sein; die Empfängerauswahl im nächsten Schritt aktiviert die Erinnerung nicht automatisch. Auf Smartphones lässt sich der Termin auslassen, einmalig per HH:MM ändern oder direkt öffnen.",
         "data": {
           "next_alarm_reminder_enabled": "Vorabend-Erinnerung aktivieren",
-          "next_alarm_reminder_time": "Uhrzeit der Erinnerung",
-          "dashboard_path": "Pfad zur Clock Card (optional)"
+          "next_alarm_reminder_time": "Uhrzeit der Erinnerung"
         },
         "data_description": {
           "next_alarm_reminder_enabled": "Muss eingeschaltet sein, damit die Vorabend-Erinnerung geplant wird. Die allgemeinen Alarmmeldungen sind davon unabhängig.",
-          "next_alarm_reminder_time": "Uhrzeit am Kalendertag vor dem Wecker, empfohlen 19:00 Uhr.",
-          "dashboard_path": "Zum Beispiel /lovelace-bedroom/alarm. Leer öffnet die Clock-Advanced-Integration."
+          "next_alarm_reminder_time": "Uhrzeit am Kalendertag vor dem Wecker, empfohlen 19:00 Uhr."
         }
       },
       "notifications": {
@@ -138,12 +136,16 @@
         "data": {
           "notifications_enabled": "Benachrichtigungen aktivieren",
           "notification_targets": "Empfänger (optional)",
-          "notification_events": "Benachrichtigen bei"
+          "notification_events": "Benachrichtigen bei",
+          "dashboard_path": "Benachrichtigungsziel (optional)",
+          "dashboard_back_path": "Rückpfad der Ziel-Subview"
         },
         "data_description": {
           "notifications_enabled": "Hauptschalter für alle Alarmmeldungen dieses Weckers.",
           "notification_targets": "Optional eine oder mehrere Notify-Entitäten auswählen, etwa ein Smartphone. Leer lassen für den Home-Assistant-Benachrichtigungseingang.",
-          "notification_events": "Nur die ausgewählten Ereignisse senden eine Meldung. Bei Blockiert nennt Clock Advanced auch die nicht erfüllte Bedingung."
+          "notification_events": "Nur die ausgewählten Ereignisse senden eine Meldung. Bei Blockiert nennt Clock Advanced auch die nicht erfüllte Bedingung.",
+          "dashboard_path": "Zum Beispiel /lovelace-bedroom/alarm. Jede navigierbare Meldung verwendet diesen installationsspezifischen Pfad.",
+          "dashboard_back_path": "Diesen Wert als back_path in der Ziel-Subview speichern, nicht im Badge oder in der Benachrichtigungsroute."
         }
       },
       "finish_actions": {
@@ -258,8 +260,7 @@
         "description": "Informiert über den exakten nächsten Wecker. Smartphone-Empfänger erhalten Auslassen, einmalige Zeitänderung und einen Link zur Clock Card.",
         "data": {
           "next_alarm_reminder_enabled": "Vorabend-Erinnerung aktivieren",
-          "next_alarm_reminder_time": "Uhrzeit der Erinnerung",
-          "dashboard_path": "Pfad zur Clock Card (optional)"
+          "next_alarm_reminder_time": "Uhrzeit der Erinnerung"
         }
       },
       "notifications": {
@@ -268,12 +269,16 @@
         "data": {
           "notifications_enabled": "Benachrichtigungen aktivieren",
           "notification_targets": "Empfänger (optional)",
-          "notification_events": "Benachrichtigen bei"
+          "notification_events": "Benachrichtigen bei",
+          "dashboard_path": "Benachrichtigungsziel (optional)",
+          "dashboard_back_path": "Rückpfad der Ziel-Subview"
         },
         "data_description": {
           "notifications_enabled": "Schaltet alle Alarmmeldungen dieses Weckers ein oder aus.",
           "notification_targets": "Notify-Entitäten wie Smartphones; leer bedeutet Home-Assistant-Benachrichtigungseingang.",
-          "notification_events": "Wähle exakt die Zustandswechsel, über die du informiert werden möchtest."
+          "notification_events": "Wähle exakt die Zustandswechsel, über die du informiert werden möchtest.",
+          "dashboard_path": "Installationsspezifische Clock-Ansicht, die Benachrichtigungen öffnen.",
+          "dashboard_back_path": "Nativer back_path, der in dieser Ziel-Subview gespeichert wird."
         }
       },
       "finish_actions": {

@@ -172,6 +172,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ClockAdvancedConfigEntry
                 "tap_action:\n"
                 "  action: more-info\n"
             )
+            subview_yaml = (
+                "subview: true\n"
+                f"back_path: {runtime._dashboard_back_path()}\n"
+            )
             title = (
                 f"Clock Advanced – Dashboard für {entry.title}"
                 if german
@@ -185,6 +189,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ClockAdvancedConfigEntry
                     f"```yaml\n{card_yaml}```\n\n"
                     "**Kleiner runder Home-Assistant-Badge:**\n\n"
                     f"```yaml\n{badge_yaml}```\n\n"
+                    "**Falls das Benachrichtigungsziel eine Subview ist:**\n\n"
+                    f"```yaml\n{subview_yaml}```\n\n"
+                    "Der Rückpfad gehört in die Ziel-Subview, nicht in das Badge "
+                    "oder die Benachrichtigungsroute.\n\n"
                     "**Einfügen:** Dashboard bearbeiten → Karte beziehungsweise Badge "
                     "hinzufügen → Clock Advanced auswählen. Navigation unter "
                     "Interaktionen und Bedingungen unter Sichtbarkeit konfigurieren. "
@@ -205,6 +213,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ClockAdvancedConfigEntry
                     f"```yaml\n{card_yaml}```\n\n"
                     "**Small round Home Assistant badge:**\n\n"
                     f"```yaml\n{badge_yaml}```\n\n"
+                    "**If the notification destination is a Subview:**\n\n"
+                    f"```yaml\n{subview_yaml}```\n\n"
+                    "The return path belongs to the destination Subview, not to "
+                    "the Badge or notification route.\n\n"
                     "**Add it:** Edit dashboard → Add card or badge → select Clock "
                     "Advanced. Configure navigation under Interactions and conditions "
                     "under Visibility. Alternatively paste the code under Manual.\n\n"
@@ -249,7 +261,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ClockAdvancedConfigEntr
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate the grouped prototype schedule to the seven-day schema."""
-    if entry.version >= 5:
+    if entry.version >= 6:
         return True
 
     existing = {**entry.data, **entry.options}
@@ -316,6 +328,6 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry,
         data=migrate(dict(entry.data)),
         options=migrate(dict(entry.options)) if entry.options else {},
-        version=5,
+        version=6,
     )
     return True

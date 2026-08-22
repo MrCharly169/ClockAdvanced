@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 2026.8.4b0 - 2026-08-22
+
+- Added installation-specific notification destination and native Subview
+  return-path fields to the setup and options flows. Lifecycle and reminder
+  notifications now align iOS `url`, Android `clickAction`, visible URI
+  actions and persistent-notification links.
+
+- Extend the shared customer-documentation contract to private and MeyersHaff
+  services with safe login guidance, Proxmox evidence and upstream monitoring.
+
+- Join the shared living customer-documentation contract with one reusable
+  capability description, four required languages, GitHub/version metadata and
+  scheduled read-only inventory checks.
+
 ## 2026.8.3b2 - 2026-08-20
 
 - Selected the current local weekday when the Advanced Card is first created,

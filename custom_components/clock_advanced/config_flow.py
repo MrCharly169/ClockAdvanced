@@ -29,6 +29,7 @@ from .const import (
     CONF_NON_WORKDAY_ENABLED,
     CONF_NON_WORKDAY_TIME,
     CONF_NOTIFICATION_EVENTS,
+    CONF_NOTIFICATION_BACK_PATH,
     CONF_NOTIFICATION_TARGETS,
     CONF_NOTIFICATIONS_ENABLED,
     CONF_PRE_ALARM_MINUTES,
@@ -54,6 +55,7 @@ from .const import (
     DEFAULT_NAME,
     DEFAULT_NON_WORKDAY_TIME,
     DEFAULT_NOTIFICATION_EVENTS,
+    DEFAULT_NOTIFICATION_BACK_PATH,
     DEFAULT_NOTIFICATIONS_ENABLED,
     DEFAULT_PRE_ALARM_MINUTES,
     DEFAULT_REPEAT_INTERVAL_MINUTES,
@@ -238,7 +240,6 @@ def _reminder_schema() -> vol.Schema:
             vol.Required(
                 CONF_REMINDER_TIME, default=DEFAULT_REMINDER_TIME
             ): selector.TimeSelector(),
-            vol.Optional(CONF_REMINDER_DASHBOARD_PATH): selector.TextSelector(),
         }
     )
 
@@ -264,6 +265,11 @@ def _notifications_schema() -> vol.Schema:
                     translation_key="notification_event",
                 )
             ),
+            vol.Optional(CONF_REMINDER_DASHBOARD_PATH): selector.TextSelector(),
+            vol.Optional(
+                CONF_NOTIFICATION_BACK_PATH,
+                default=DEFAULT_NOTIFICATION_BACK_PATH,
+            ): selector.TextSelector(),
         }
     )
 
@@ -271,7 +277,7 @@ def _notifications_schema() -> vol.Schema:
 class ClockAdvancedConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Create a generic advanced clock through a guided wizard."""
 
-    VERSION = 5
+    VERSION = 6
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}
@@ -543,7 +549,6 @@ class ClockAdvancedOptionsFlow(config_entries.OptionsFlowWithReload):
         keys = (
             CONF_REMINDER_ENABLED,
             CONF_REMINDER_TIME,
-            CONF_REMINDER_DASHBOARD_PATH,
         )
         if user_input is not None:
             return self._save(user_input, keys)
@@ -591,6 +596,8 @@ class ClockAdvancedOptionsFlow(config_entries.OptionsFlowWithReload):
             CONF_NOTIFICATIONS_ENABLED,
             CONF_NOTIFICATION_TARGETS,
             CONF_NOTIFICATION_EVENTS,
+            CONF_REMINDER_DASHBOARD_PATH,
+            CONF_NOTIFICATION_BACK_PATH,
         )
         if user_input is not None:
             return self._save(user_input, keys)

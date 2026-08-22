@@ -144,7 +144,9 @@ The wizard follows the customer journey in ten small decisions:
 5. **Before and at start** — optional Prepare and Start actions.
 6. **Snooze and no response** — cadence, Snooze, escalation, timeout and their actions.
 7. **Evening reminder** — optional exact-occurrence reminder and Card path.
-8. **Notifications** — recipients and selected lifecycle messages.
+8. **Notifications** — recipients, selected lifecycle messages, the
+   installation-specific notification destination and its native Subview
+   return path.
 9. **Finish and safety** — Dismiss, Timeout and Cleanup actions.
 10. **Review** — a final summary and explicit confirmation.
 
@@ -253,7 +255,7 @@ Cleanup is a defined finish hook, not a guarantee that every configured device c
 
 Lifecycle notifications and the evening reminder are separate options.
 
-For lifecycle notifications, enable the master switch and select any of: Prepare, Start, Repeat, Escalate, Snooze, Dismiss, Timeout, Skipped, Blocked and Error. You can select one or more `notify.*` entities. With no recipient selected, Clock Advanced creates a Home Assistant persistent notification instead. The shipped default event selection is Start, Escalate, Timeout and Blocked when lifecycle notifications are enabled.
+For lifecycle notifications, enable the master switch and select any of: Prepare, Start, Repeat, Escalate, Snooze, Dismiss, Timeout, Skipped, Blocked and Error. You can select one or more `notify.*` entities. Set the notification destination to the Clock view used in this installation. If that view is a Subview, save the configured return path as its native `back_path`; the Badge and notification route do not own that setting. With no recipient selected, Clock Advanced creates a Home Assistant persistent notification instead. The shipped default event selection is Start, Escalate, Timeout and Blocked when lifecycle notifications are enabled.
 
 The optional evening reminder announces tomorrow's exact occurrence at the configured time and uses the same recipient list. Native mobile Notify recipients receive actions to:
 
