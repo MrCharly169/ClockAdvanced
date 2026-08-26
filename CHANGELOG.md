@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## 2026.8.5b0 - 2026-08-26
+
+- Allow every optional options-flow field to override and clear a value that
+  was saved in the original config-entry data. Clearing a Workday, Vacation,
+  wake-confirmation or action selection no longer falls back to the old setup
+  value after the entry reloads.
+
+- Adopt ecosystem policy 1.7: author technical Home Assistant artifacts in
+  English regardless of the conversation language, and keep one identical
+  explicit HTTPS target across external notification navigation fields.
+
+- Adopt ecosystem policy 1.6: approved integration and live Dashboard changes
+  must exist in durable sources and tests before a fresh beta release workspace
+  may publish or install them.
+
 ## 2026.8.4b0 - 2026-08-22
 
 - Added installation-specific notification destination and native Subview

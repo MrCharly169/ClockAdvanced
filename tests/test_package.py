@@ -135,6 +135,17 @@ class PackageTests(unittest.TestCase):
         self.assertIn("async_step_notifications", config_flow)
         self.assertIn("CONF_NOTIFICATION_TARGETS", config_flow)
 
+    def test_options_can_clear_values_from_original_entry_data(self) -> None:
+        config_flow = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
+        self.assertIn(
+            "if key in self.config_entry.data and key not in values:", config_flow
+        )
+        self.assertIn("data[key] = None", config_flow)
+        self.assertLess(
+            config_flow.index("data[key] = None"),
+            config_flow.index("data.update(values)"),
+        )
+
     def test_customer_notification_controls_and_reasons_are_shipped(self) -> None:
         config_flow = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
         runtime = (COMPONENT / "runtime.py").read_text(encoding="utf-8")

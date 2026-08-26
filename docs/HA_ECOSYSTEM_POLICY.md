@@ -1,7 +1,7 @@
 # Home Assistant Ecosystem Policy
 
 Policy-ID: meyershaff-ha-ecosystem
-Policy-Version: 1.5.0
+Policy-Version: 1.7.0
 Adopted: 2026-08-20
 
 ## Scope and automatic classification
@@ -18,6 +18,23 @@ A change is **ecosystem-wide** when it changes a convention, entity contract,
 dashboard behavior, release rule, or frontend pattern that can apply to more
 than one registered integration. Such a change must be recorded here and in
 every affected project mirror before it is considered complete.
+
+## Home Assistant language contract
+
+All technical Home Assistant artifacts are authored in English,
+regardless of the conversation language used to request or discuss the work.
+
+- This includes entity and helper names, automation and script aliases and
+  descriptions, Dashboard titles and labels, notification copy and action
+  labels, source comments, logs, diagnostics, service descriptions, errors,
+  setup and options flows, and default status text.
+- Stable identifiers, entity IDs, translation keys and code-facing values use
+  English `snake_case` or the native convention required by Home Assistant.
+- Proper names and established physical area names may remain unchanged.
+- Home Assistant translation files may localize user-facing strings, but their
+  source keys and complete English default remain authoritative.
+- The living customer documentation remains multilingual where its own
+  contract requires Luxembourgish, German, French and English.
 
 ## Native-first Home Assistant contract
 
@@ -56,10 +73,12 @@ Visibility conditions whenever they can express the required behavior.
 Mobile notification navigation and Dashboard return navigation are separate
 native Home Assistant concerns.
 
-- A Mobile App deep link uses the same relative Home Assistant path in `url`,
-  Android `clickAction`, and every matching `URI` action. Internal persistent
-  notifications use an equivalent relative Markdown link when navigation is
-  useful. Notification clear calls never receive navigation fields.
+- A Mobile App notification uses one identical destination in `url`, Android
+  `clickAction`, and every matching `URI` action. An internal Home Assistant
+  destination is a relative Home Assistant path; an external web destination
+  is the same explicit `https://` URL in all three fields. Internal persistent
+  notifications use an equivalent Markdown link when navigation is useful.
+  Notification clear calls never receive navigation fields.
 - `navigation_path` belongs to a Badge or Card interaction. `back_path` belongs
   only to the destination Lovelace Subview. A Badge, custom Card, notification
   payload, or logical notification route must not invent a second Back-path
@@ -125,6 +144,30 @@ active/available mapping, dashboard destination, and verified local context.
 - An account must not be described as active without residence-specific
   evidence. Unverified account-based services remain available or explicitly
   approval-required until their customer mapping is confirmed.
+
+## Durable progress and release handoff
+
+Approved work is complete only when it can be reproduced from durable sources.
+
+- Live configuration, working-tree edits, chat notes and one-off artifacts are
+  not substitutes for canonical project files and regression tests. Every
+  approved product change must be present there before a release is prepared.
+- Installation-specific live changes must also be represented in the owning
+  Home Assistant workspace's apply, update or cleanup scripts and tests so a
+  later integration release or Dashboard rebuild preserves them.
+- Before any beta or stable preparation, push, publication or installation,
+  audit the canonical working tree and the selected source commit. The release
+  process must stop when an approved change would be absent from the selected
+  source commit, fresh release workspace or generated artifact.
+- Never discard, stash, overwrite or silently exclude pending user work to make
+  a release gate pass. Incorporate it, record an explicitly approved deferral
+  in a durable source, or stop and request direction.
+- Authorization to edit or test does not by itself authorize a push,
+  publication or installation. Where project instructions require it, obtain
+  explicit user authorization before those external actions.
+- After publication and installation, verify that the exact installed version
+  contains the approved change and that its related live configuration remains
+  present and idempotent.
 
 ## Beta release trains
 

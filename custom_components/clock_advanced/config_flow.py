@@ -492,7 +492,10 @@ class ClockAdvancedOptionsFlow(config_entries.OptionsFlowWithReload):
             )
         data = dict(self.config_entry.options)
         for key in clear:
-            data.pop(key, None)
+            if key in self.config_entry.data and key not in values:
+                data[key] = None
+            else:
+                data.pop(key, None)
         data.update(values)
         return self.async_create_entry(data=data)
 
