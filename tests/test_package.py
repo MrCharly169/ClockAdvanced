@@ -137,12 +137,12 @@ class PackageTests(unittest.TestCase):
 
     def test_options_can_clear_values_from_original_entry_data(self) -> None:
         config_flow = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
-        self.assertIn(
-            "if key in self.config_entry.data and key not in values:", config_flow
-        )
-        self.assertIn("data[key] = None", config_flow)
+        self.assertIn("entry_data = dict(self.config_entry.data)", config_flow)
+        self.assertIn("entry_data.pop(key, None)", config_flow)
+        self.assertIn("self.config_entry, data=entry_data", config_flow)
+        self.assertNotIn("data[key] = None", config_flow)
         self.assertLess(
-            config_flow.index("data[key] = None"),
+            config_flow.index("entry_data.pop(key, None)"),
             config_flow.index("data.update(values)"),
         )
 

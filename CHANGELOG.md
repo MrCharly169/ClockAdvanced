@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 2026.8.5b1 - 2026-08-26
+
+- Remove cleared optional options-flow values from legacy config-entry data
+  instead of storing a `None` override. Home Assistant filters that override
+  during options-flow persistence, which could otherwise make the original
+  value reappear after reload.
+
 ## 2026.8.5b0 - 2026-08-26
 
 - Allow every optional options-flow field to override and clear a value that
