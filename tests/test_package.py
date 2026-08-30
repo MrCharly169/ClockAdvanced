@@ -167,6 +167,9 @@ class PackageTests(unittest.TestCase):
         for field in ('"url": path', '"clickAction": path', '"action": "URI"', '"uri": path'):
             self.assertIn(field, runtime)
         self.assertIn("_dashboard_back_path", runtime)
+        self.assertIn('f"⏰ {self.entry.title}: {label}"', runtime)
+        self.assertIn('"notification_icon": "mdi:alarm"', runtime)
+        self.assertIn('"color": "#5C6BC0"', runtime)
         self.assertIn("CONF_NOTIFICATION_BACK_PATH", diagnostics)
 
     def test_actionable_evening_reminder_is_occurrence_safe(self) -> None:

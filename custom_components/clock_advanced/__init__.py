@@ -232,7 +232,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ClockAdvancedConfigEntry
                     "persistent_notification",
                     "create",
                     {
-                        "title": title,
+                        "title": title if title.startswith("⏰") else f"⏰ {title}",
                         "message": message,
                         "notification_id": f"clock_advanced_card_{entry.entry_id}",
                     },

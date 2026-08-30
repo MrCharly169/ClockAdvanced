@@ -1119,7 +1119,7 @@ class ClockRuntime:
             )
         else:
             message = label
-        return f"{self.entry.title}: {label}", message
+        return f"⏰ {self.entry.title}: {label}", message
 
     async def _async_send_notification(self, event: str, **extra: Any) -> None:
         """Send to selected notify entities or the HA notification inbox."""
@@ -1184,9 +1184,9 @@ class ClockRuntime:
         alarm = dt_util.as_local(self.next_alarm)
         german = (self.hass.config.language or "en").lower().startswith("de")
         title = (
-            f"{self.entry.title}: nächster Wecker"
+            f"⏰ {self.entry.title}: nächster Wecker"
             if german
-            else f"{self.entry.title}: next alarm"
+            else f"⏰ {self.entry.title}: next alarm"
         )
         message = (
             f"Der nächste Wecker ist morgen, {alarm:%d.%m.}, um {alarm:%H:%M} Uhr."
@@ -1225,9 +1225,9 @@ class ClockRuntime:
     async def _async_send_reminder_feedback(self, message: str) -> None:
         german = (self.hass.config.language or "en").lower().startswith("de")
         title = (
-            f"{self.entry.title}: Wecker aktualisiert"
+            f"⏰ {self.entry.title}: Wecker aktualisiert"
             if german
-            else f"{self.entry.title}: alarm updated"
+            else f"⏰ {self.entry.title}: alarm updated"
         )
         await self._async_deliver_reminder(
             title,
@@ -1304,6 +1304,8 @@ class ClockRuntime:
             "url": path,
             "clickAction": path,
             "tag": f"clock_advanced_{self.entry.entry_id}_next_alarm",
+            "notification_icon": "mdi:alarm",
+            "color": "#5C6BC0",
             "actions": actions,
         }
         simple_targets: list[str] = []

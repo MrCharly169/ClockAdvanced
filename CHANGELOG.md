@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 2026.8.6b0 - 2026-08-30
+
+- Adopt ecosystem policy 1.8: Clock notifications now use one alarm-clock title
+  symbol on every platform plus `mdi:alarm` and a stable color on Android.
+
 ## 2026.8.5b1 - 2026-08-26
 
 - Remove cleared optional options-flow values from legacy config-entry data
