@@ -1200,22 +1200,44 @@ class ClockAdvancedBadge extends HTMLElement {
 }
 
 class ClockAdvancedBadgeEditor extends HTMLElement {
-  constructor() { super(); this.attachShadow({ mode: "open" }); }
-  set hass(value) { this._hass = value; this._render(); }
-  setConfig(config) { this._config = { language: "auto", ...config }; this._render(); }
-  _render() {
-    if (!this._config) return;
-    const de = String(this._hass?.language || "en").toLowerCase().startsWith("de");
-    this.shadowRoot.innerHTML = `<ha-form></ha-form>
-      <div class="help">${de
-        ? "Das Weckerlogo, Zusatzsymbol und die Farbe folgen dem Zustand. Entität, Interaktion und Sichtbarkeit werden mit Home Assistants nativen Editoren konfiguriert; dieses Badge besitzt keine eigenen Navigate-, Hidden- oder Zustandslisten."
-        : "The clock logo, marker and color follow the state. Configure the entity, interaction and visibility with Home Assistant's native editors; this Badge has no separate Navigate, Hidden or state lists."}</div>
-      <style>:host{display:block;padding:4px 0}.help{margin-top:12px;font-size:11px;line-height:1.4;color:var(--secondary-text-color)}</style>`;
-    const form = this.shadowRoot.querySelector?.("ha-form");
-    if (!form) return;
-    form.hass = this._hass;
-    form.data = this._config;
-    form.schema = [
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._form = null;
+    this._help = null;
+    this._formLanguage = null;
+    this._handleFormChange = (event) => {
+      this._config = { ...this._config, ...(event.detail?.value || {}) };
+      this.dispatchEvent(new CustomEvent("config-changed", {
+        detail: { config: { ...this._config } }, bubbles: true, composed: true,
+      }));
+    };
+  }
+  set hass(value) { this._hass = value; this._ensureStructure(); this._syncForm(false); }
+  setConfig(config) {
+    const next = { language: "auto", ...config };
+    const changed = JSON.stringify(next) !== JSON.stringify(this._config);
+    this._config = next;
+    this._ensureStructure();
+    this._syncForm(changed);
+  }
+  _ensureStructure() {
+    if (!this.shadowRoot || this._form) return;
+    this.shadowRoot.innerHTML = `<ha-form></ha-form><div class="help"></div>
+      <style>:host{display:block;padding:4px 0;overflow-anchor:none}.help{margin-top:12px;font-size:11px;line-height:1.4;color:var(--secondary-text-color)}</style>`;
+    this._form = this.shadowRoot.querySelector?.("ha-form") || null;
+    this._help = this.shadowRoot.querySelector?.(".help") || null;
+    this._form?.addEventListener("value-changed", this._handleFormChange);
+  }
+  _syncForm(dataChanged) {
+    if (!this._form || !this._config) return;
+    const language = String(this._hass?.language || "en").toLowerCase();
+    const de = language.startsWith("de");
+    if (this._form.hass !== this._hass) this._form.hass = this._hass;
+    if (dataChanged || this._form.data == null) this._form.data = { ...this._config };
+    if (this._formLanguage === language) return;
+    this._formLanguage = language;
+    this._form.schema = [
       { name: "entity", required: true, selector: { entity: { domain: "sensor" } } },
       { name: "title", selector: { text: {} } },
       { name: "language", required: true, selector: { select: { mode: "dropdown", options: [
@@ -1223,17 +1245,14 @@ class ClockAdvancedBadgeEditor extends HTMLElement {
         { value: "en", label: "English" }, { value: "de", label: "Deutsch" },
       ] } } },
     ];
-    form.computeLabel = (schema) => ({
+    this._form.computeLabel = (schema) => ({
       entity: de ? "Status-Entität" : "Status entity",
       title: de ? "Name im Tooltip" : "Tooltip name",
       language: de ? "Sprache" : "Language",
     }[schema.name] || schema.name);
-    form.addEventListener("value-changed", (event) => {
-      this._config = { ...this._config, ...(event.detail?.value || {}) };
-      this.dispatchEvent(new CustomEvent("config-changed", {
-        detail: { config: { ...this._config } }, bubbles: true, composed: true,
-      }));
-    });
+    if (this._help) this._help.textContent = de
+      ? "Das Weckerlogo, Zusatzsymbol und die Farbe folgen dem Zustand. Entität, Interaktion und Sichtbarkeit werden mit Home Assistants nativen Editoren konfiguriert; dieses Badge besitzt keine eigenen Navigate-, Hidden- oder Zustandslisten."
+      : "The clock logo, marker and color follow the state. Configure the entity, interaction and visibility with Home Assistant's native editors; this Badge has no separate Navigate, Hidden or state lists.";
   }
 }
 

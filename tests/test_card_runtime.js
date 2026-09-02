@@ -447,7 +447,21 @@ global.document = {
   const badgeEditor = new (registry.get("clock-advanced-badge-editor"))();
   badgeEditor.setConfig(badgeStub);
   badgeEditor.hass = hass;
-  if (!badgeEditor.shadowRoot.innerHTML.includes("native editors")) throw new Error("Badge editor did not delegate entity, interaction and visibility configuration");
+  if (!badgeEditor.shadowRoot.querySelector(".help")?.textContent?.includes("native editors")) throw new Error("Badge editor did not delegate entity, interaction and visibility configuration");
+  const stableBadgeForm = badgeEditor.shadowRoot.querySelector("ha-form");
+  const badgeEditorWrites = badgeEditor.shadowRoot.writeCount;
+  stableBadgeForm.selectorOpen = true;
+  stableBadgeForm.listScrollTop = 620;
+  stableBadgeForm.focused = true;
+  const scrollCallsBeforeEditorRefresh = document.scrollCalls;
+  badgeEditor.hass = { ...hass, states: { ...hass.states, "sensor.unrelated": { state: "on", attributes: {} } } };
+  badgeEditor.hass = { ...hass, states: { ...hass.states, "sensor.clock_status": { ...hass.states["sensor.clock_status"], state: "ringing" } } };
+  if (badgeEditor.shadowRoot.querySelector("ha-form") !== stableBadgeForm
+    || badgeEditor.shadowRoot.writeCount !== badgeEditorWrites
+    || stableBadgeForm.selectorOpen !== true
+    || stableBadgeForm.listScrollTop !== 620
+    || stableBadgeForm.focused !== true
+    || document.scrollCalls !== scrollCallsBeforeEditorRefresh) throw new Error("Badge editor disturbed its open native selector, list scroll, focus, or dashboard scroll during hass updates");
   if (!window.customBadges?.some((item) => item.type === "clock-advanced-badge")) throw new Error("Badge picker registration missing");
   if (!source.includes('{ value: "compact"') || !source.includes('{ value: "easy"') || !source.includes('{ value: "advanced"')) throw new Error("Compact, Easy, and Advanced modes are not available");
   console.log("Clock Advanced Card runtime contract valid");

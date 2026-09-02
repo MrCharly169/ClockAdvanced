@@ -13,7 +13,7 @@ class PackageTests(unittest.TestCase):
         manifest = json.loads((COMPONENT / "manifest.json").read_text(encoding="utf-8"))
         hacs = json.loads((ROOT / "hacs.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["domain"], "clock_advanced")
-        self.assertTrue(manifest["version"].startswith("2026.8."))
+        self.assertRegex(manifest["version"], r"^2026\.\d{1,2}\.\d+(?:b[0-9])?$")
         self.assertEqual(manifest["integration_type"], "hub")
         self.assertEqual(hacs["homeassistant"], "2026.8.0")
         self.assertTrue(hacs["hide_default_branch"])

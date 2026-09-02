@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 2026.9.0b0 - 2026-09-02
+
+- Keep the native Badge editor form mounted across Home Assistant refreshes so
+  open entity/language dropdowns, long selector-list scroll, keyboard focus and
+  the surrounding Dashboard scroll position remain unchanged.
+- Adopt ecosystem policy 1.9 for refresh-stable Custom Card, Badge and editor
+  interactions.
+
 ## 2026.8.6b0 - 2026-08-30
 
 - Adopt ecosystem policy 1.8: Clock notifications now use one alarm-clock title
