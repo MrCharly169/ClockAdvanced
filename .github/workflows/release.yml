@@ -2,7 +2,9 @@ name: Release
 
 on:
   push:
-    tags: ["v2026.*"]
+    branches: [main, develop]
+    paths:
+      - custom_components/clock_advanced/manifest.json
 
 permissions:
   contents: write
@@ -22,18 +24,24 @@ jobs:
         shell: bash
         run: |
           VERSION="$(python -c 'import json; print(json.load(open("custom_components/clock_advanced/manifest.json"))["version"])')"
-          if [[ ! "$VERSION" =~ ^20[0-9]{2}\.([1-9]|1[0-2])\.[0-9]+(b[0-9])?$ ]]; then
-            echo "::error::Version must be YYYY.M.PATCH or a bounded beta YYYY.M.PATCHb0..b9."
+          if [[ "${{ github.ref_name }}" == "develop" && "$VERSION" =~ ^20[0-9]{2}\.([1-9]|1[0-2])\.[0-9]+b[0-9]$ ]]; then
+            CHANNEL="beta"
+          elif [[ "${{ github.ref_name }}" == "main" && "$VERSION" =~ ^20[0-9]{2}\.([1-9]|1[0-2])\.[0-9]+$ ]]; then
+            CHANNEL="stable"
+          else
+            echo "::error::main requires YYYY.M.PATCH and develop requires bounded beta YYYY.M.PATCHb0..b9."
             exit 1
           fi
-          if [[ "${{ github.ref_name }}" != "v$VERSION" ]]; then
-            echo "::error::Tag must equal v$VERSION."
-            exit 1
-          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "CHANNEL=$CHANNEL" >> "$GITHUB_ENV"
       - run: python -m unittest discover -s tests -v
       - run: node tests/test_card_runtime.js
-      - run: python scripts/build_release.py --tag "${{ github.ref_name }}"
+      - run: python scripts/build_release.py --tag "v$VERSION"
       - uses: softprops/action-gh-release@v2
         with:
-          prerelease: ${{ contains(github.ref_name, 'b') }}
+          tag_name: v${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: Clock Advanced v${{ env.VERSION }}
+          prerelease: ${{ env.CHANNEL == 'beta' }}
+          make_latest: ${{ env.CHANNEL == 'stable' }}
           files: dist/clock_advanced.zip
