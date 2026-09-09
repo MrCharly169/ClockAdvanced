@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const vm = require("vm");
 
 class FakeStyle {
   constructor() { this.values = new Map(); }
@@ -105,6 +106,13 @@ global.document = {
 (async () => {
   const sourcePath = path.join(__dirname, "..", "custom_components", "clock_advanced", "frontend", "clock-advanced-card.js");
   const source = fs.readFileSync(sourcePath, "utf8");
+  const languageDeclaration = source.match(/const customerPresentationLanguage\s*=\s*[\s\S]*?;\s*(?:\r?\n|$)/)?.[0]?.trim();
+  if (!languageDeclaration) throw new Error("Customer presentation language resolver is missing");
+  const resolveCustomerLanguage = vm.runInNewContext(`${languageDeclaration}; customerPresentationLanguage;`);
+  for (const [value, expected] of [["en", "en"], ["EN_us", "en"], ["de", "de"], ["fr", "de"], ["pl", "de"], ["enochian", "de"], [undefined, "de"], ["", "de"]]) {
+    if (resolveCustomerLanguage(value) !== expected) throw new Error(`Unexpected language fallback for ${String(value)}`);
+  }
+  if (/hass\??\.config\??\.language|navigator\??\.language|\.startsWith\(["']de["']\)/.test(source)) throw new Error("Card language must come only from the active Home Assistant app/profile language");
   await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`);
   const Card = registry.get("clock-advanced-card");
   if (!Card) throw new Error("Card was not registered");

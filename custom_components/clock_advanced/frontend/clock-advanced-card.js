@@ -4,6 +4,10 @@ const BADGE_TAG = "clock-advanced-badge";
 const BADGE_EDITOR_TAG = "clock-advanced-badge-editor";
 const WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const currentWeekdayIndex = () => (new Date().getDay() + 6) % 7;
+// Customer-visible text follows the active app/profile language. Only explicit
+// English tags select English; missing and unsupported tags use German.
+const customerPresentationLanguage = (value) =>
+  String(value ?? "de").trim().toLowerCase().split(/[-_]/)[0] === "en" ? "en" : "de";
 
 const TEXT = {
   en: {
@@ -271,7 +275,7 @@ class ClockAdvancedCard extends HTMLElement {
   _lang() {
     const configured = this._config?.language;
     if (configured === "de" || configured === "en") return configured;
-    return String(this._hass?.language || navigator.language || "en").toLowerCase().startsWith("de") ? "de" : "en";
+    return customerPresentationLanguage(this._hass?.language);
   }
 
   _targetDate(attrs) {
@@ -911,7 +915,7 @@ class ClockAdvancedCardEditor extends HTMLElement {
   constructor() { super(); this.attachShadow({ mode: "open" }); }
   set hass(value) { this._hass = value; this._render(); }
   setConfig(config) { this._config = { mode: "easy", language: "auto", ...config }; this._render(); }
-  _lang() { return String(this._hass?.language || navigator.language || "en").startsWith("de") ? "de" : "en"; }
+  _lang() { return customerPresentationLanguage(this._hass?.language); }
   _render() {
     if (!this._config) return;
     const t = TEXT[this._lang()];
@@ -1032,7 +1036,7 @@ class ClockAdvancedBadge extends HTMLElement {
   _lang() {
     const configured = this._config?.language;
     if (configured === "de" || configured === "en") return configured;
-    return String(this._hass?.language || navigator.language || "en").toLowerCase().startsWith("de") ? "de" : "en";
+    return customerPresentationLanguage(this._hass?.language);
   }
 
   _stateIcon(status) {
@@ -1231,8 +1235,8 @@ class ClockAdvancedBadgeEditor extends HTMLElement {
   }
   _syncForm(dataChanged) {
     if (!this._form || !this._config) return;
-    const language = String(this._hass?.language || "en").toLowerCase();
-    const de = language.startsWith("de");
+    const language = String(this._hass?.language || "de").toLowerCase();
+    const de = customerPresentationLanguage(language) === "de";
     if (this._form.hass !== this._hass) this._form.hass = this._hass;
     if (dataChanged || this._form.data == null) this._form.data = { ...this._config };
     if (this._formLanguage === language) return;

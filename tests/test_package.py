@@ -109,6 +109,15 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(set(en["config"]["step"]), set(de["config"]["step"]))
         self.assertEqual(set(en["entity"]), set(de["entity"]))
 
+    def test_frontend_language_uses_the_active_app_profile(self) -> None:
+        frontend = (COMPONENT / "frontend" / "clock-advanced-card.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("customerPresentationLanguage", frontend)
+        self.assertNotIn("hass?.config?.language", frontend)
+        self.assertNotIn("navigator.language", frontend)
+        self.assertNotIn('.startsWith("de")', frontend)
+
     def test_diagnostics_redact_actions_and_links(self) -> None:
         diagnostics = (COMPONENT / "diagnostics.py").read_text(encoding="utf-8")
         self.assertIn("ACTION_PHASES", diagnostics)

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+
+## 2026.9.1b0 - 2026-09-09
+
+- Resolve Card, Badge and editor copy exclusively from the active Home
+  Assistant app/profile language, with explicit English and a consistent
+  German fallback for unsupported or missing tags.
+- Add runtime guards against installation-language, browser-language and
+  legacy mixed-language fallbacks; adopt ecosystem policy 1.18.
+
 ## 2026.9.0b0 - 2026-09-02
 
 - Keep the native Badge editor form mounted across Home Assistant refreshes so

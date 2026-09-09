@@ -6,13 +6,13 @@
         "title": "Erweiterten Wecker anlegen",
         "description": "Schritt 1 von 10 · Gib diesem Wecker einen eindeutigen Raum- oder Verwendungsnamen. Danach führt dich der Assistent durch den Ablauf aus Kundensicht.",
         "data": { "name": "Name" },
-        "data_description": { "name": "Dieser Name erscheint bei Entitäten, auf der Card und in Benachrichtigungen, zum Beispiel „Wecker Schlafzimmer“." }
+        "data_description": { "name": "Dieser Name erscheint bei Entitäten, auf der Karte und in Benachrichtigungen, zum Beispiel „Wecker Schlafzimmer“." }
       },
       "source": {
         "title": "Weckzeit-Quelle auswählen",
-        "description": "Schritt 2 von 10 · Wähle, woher die Weckzeiten kommen. Für die einfachste Bedienung direkt auf der Advanced Card ist der Clock-Advanced-Wochenplan empfohlen.",
+        "description": "Schritt 2 von 10 · Wähle, woher die Weckzeiten kommen. Für die einfachste Bedienung direkt auf der erweiterten Karte ist der Clock-Advanced-Wochenplan empfohlen.",
         "data": { "schedule_source": "Weckzeit-Quelle" },
-        "data_description": { "schedule_source": "Clock Advanced: Zeiten pro Wochentag in Integration und Card bearbeiten. Home-Assistant-Zeitplan: vorhandene Zeitblöcke verwenden; Card-Zeitbearbeitung ist dann deaktiviert." }
+        "data_description": { "schedule_source": "Clock Advanced: Zeiten pro Wochentag in Integration und Karte bearbeiten. Home-Assistant-Zeitplan: vorhandene Zeitblöcke verwenden; Zeitbearbeitung in der Karte ist dann deaktiviert." }
       },
       "helper_schedule": {
         "title": "Home-Assistant-Zeitplan auswählen",
@@ -36,7 +36,7 @@
           "non_workday_enabled": "Feiertagszeit verwenden", "non_workday_time": "Feiertagszeit"
         },
         "data_description": {
-          "holiday_enabled": "Wenn Ferienzeit auf der Card aktiv ist, bleibt der Wecker an und verwendet diese alternative Uhrzeit.",
+          "holiday_enabled": "Wenn Ferienzeit auf der Karte aktiv ist, bleibt der Wecker an und verwendet diese alternative Uhrzeit.",
           "holiday_time": "Alternative Weckzeit von Montag bis Freitag, solange der Tag kein Feiertag ist.",
           "holiday_weekend_time": "Alternative Weckzeit an Samstagen, Sonntagen und Feiertagen. Urlaub hingegen blockiert den Wecker vollständig.",
           "non_workday_enabled": "Verwendet an freien Tagen eine spätere Uhrzeit, sofern ein Arbeitstag-Sensor ausgewählt ist.",
@@ -257,7 +257,7 @@
       },
       "reminder": {
         "title": "Erinnerung am Vorabend",
-        "description": "Informiert über den exakten nächsten Wecker. Smartphone-Empfänger erhalten Auslassen, einmalige Zeitänderung und einen Link zur Clock Card.",
+        "description": "Informiert über den exakten nächsten Wecker. Smartphone-Empfänger erhalten Auslassen, einmalige Zeitänderung und einen Link zur Clock-Advanced-Karte.",
         "data": {
           "next_alarm_reminder_enabled": "Vorabend-Erinnerung aktivieren",
           "next_alarm_reminder_time": "Uhrzeit der Erinnerung"
